@@ -178,7 +178,16 @@ async function executeSelectedPublication() {
   const confirmation = pendingPublication.mode === 'main' ? 'PUSH_MAIN' : 'PUSH_BRANCH';
   try {
     const result = await api(`/api/runs/${run.id}/git/execute`, { method: 'POST', body: JSON.stringify({ confirmation, files }) });
-    detail.querySelector('#message').innerHTML = `<p class="notice">Push terminé: ${escapeHtml(result.commit)}<br>${escapeHtml(result.pullRequest?.url || result.pullRequest?.instruction || 'main mis à jour')}</p>`;
+    detail.querySelector('#message').innerHTML = `<p class="notice">Push terminé: ${escapeHtml(result.commit)}<br>${escapeHtml(result.pullRequest?.url || result.pullRequest?.instruction || 'main mis à jour')}</p>${result.pullRequest?.status === 'CREATED' ? '<button id="merge-main">Fusionner cette pull request dans main</button>' : ''}`;
+    detail.querySelector('#merge-main')?.addEventListener('click', mergePullRequest);
+  } catch (error) { detail.querySelector('#message').innerHTML += `<p class="notice error">${escapeHtml(error.message)}</p>`; }
+}
+
+async function mergePullRequest() {
+  if (!confirm('Fusionner cette pull request dans main ? Cette action met à jour la branche de production.')) return;
+  try {
+    const result = await api(`/api/runs/${run.id}/git/merge`, { method: 'POST', body: JSON.stringify({ confirmation: 'MERGE_MAIN' }) });
+    detail.querySelector('#message').innerHTML = `<p class="notice">Pull request fusionnée dans main.<br>${escapeHtml(result.pullRequest.url)}</p>`;
   } catch (error) { detail.querySelector('#message').innerHTML += `<p class="notice error">${escapeHtml(error.message)}</p>`; }
 }
 

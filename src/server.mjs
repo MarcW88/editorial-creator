@@ -6,7 +6,7 @@ import { executeStep, doctor } from './codex-executor.mjs';
 import { syncSkills } from './skill-registry.mjs';
 import { listRoutes } from './workflow-router.mjs';
 import { inspectSiteSource, confirmSite, listOnboardedSites } from './onboarding.mjs';
-import { prepareGitPublication, executeGitPublication } from './git-publisher.mjs';
+import { prepareGitPublication, executeGitPublication, mergeGitPublication } from './git-publisher.mjs';
 import { createBatch, getBatch, executeBatch, executeRunAutomatically } from './automation.mjs';
 
 const root = resolve(import.meta.dirname, '..');
@@ -53,6 +53,8 @@ const server = createServer(async (request, response) => {
     if (url.pathname === '/api/runs' && request.method === 'POST') return json(response, 201, await createRun(await body(request)));
     const gitPrepareMatch = url.pathname.match(/^\/api\/runs\/([^/]+)\/git\/prepare$/);
     if (gitPrepareMatch && request.method === 'POST') return json(response, 200, await prepareGitPublication(gitPrepareMatch[1], (await body(request)).mode));
+    const gitMergeMatch = url.pathname.match(/^\/api\/runs\/([^/]+)\/git\/merge$/);
+    if (gitMergeMatch && request.method === 'POST') return json(response, 200, await mergeGitPublication(gitMergeMatch[1], (await body(request)).confirmation));
     const gitExecuteMatch = url.pathname.match(/^\/api\/runs\/([^/]+)\/git\/execute$/);
     if (gitExecuteMatch && request.method === 'POST') {
       const input = await body(request);

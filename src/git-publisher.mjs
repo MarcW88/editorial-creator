@@ -36,6 +36,19 @@ export async function prepareGitPublication(runId, mode) {
   return run.gitPublication;
 }
 
+export async function mergeGitPublication(runId, confirmation) {
+  const run = await getRun(runId);
+  const publication = run.gitPublication;
+  if (confirmation !== 'MERGE_MAIN') throw new Error('Confirmation exacte requise: MERGE_MAIN');
+  if (publication?.pullRequest?.status !== 'CREATED' || !publication.pullRequest.url) throw new Error('Aucune pull request créée ne peut être fusionnée.');
+  await runCommand('gh', ['pr', 'merge', publication.pullRequest.url, '--merge'], run.input.sitePath);
+  publication.pullRequest.status = 'MERGED';
+  publication.pullRequest.mergedAt = new Date().toISOString();
+  publication.status = 'MERGED_TO_MAIN';
+  await saveRun(run);
+  return publication;
+}
+
 export async function executeGitPublication(runId, confirmation, selectedFiles) {
   const run = await getRun(runId);
   const publication = run.gitPublication;
