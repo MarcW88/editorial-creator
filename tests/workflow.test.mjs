@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createRun, listRuns, approveStep } from '../src/run-store.mjs';
+import { createRun, listRuns, recoverCompletedArtifact, approveStep } from '../src/run-store.mjs';
 
 test('seule la première étape est initialement accessible', async () => {
   const run = await createRun({ sitePath: '/tmp/site', target: '/guides/test' });
@@ -26,6 +26,15 @@ test('les exécutions persistées peuvent être retrouvées après rechargement'
   const created = await createRun({ sitePath: '/tmp/site', target: '/guides/reprise', operation: 'create' });
   const runs = await listRuns();
   assert.ok(runs.some(run => run.id === created.id));
+});
+
+test('un artefact conforme peut être récupéré indépendamment de son verdict éditorial', async () => {
+  const run = await createRun({ sitePath: '/tmp/site', target: '/guides/reprise', operation: 'create' });
+  run.steps[0].status = 'FAILED';
+  run.steps[0].attempts.push({ exitCode: 0, artifactBytes: 120, status: 'FAILED', outcome: 'FAIL' });
+  const recovered = await recoverCompletedArtifact(run, run.steps[0].id);
+  assert.equal(recovered.steps[0].status, 'AWAITING_APPROVAL');
+  assert.equal(recovered.steps[0].attempts[0].outcome, 'FAIL');
 });
 
 test('un refus bloque le workflow et exige une révision', async () => {

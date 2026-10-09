@@ -1,7 +1,7 @@
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { extname, join, resolve } from 'node:path';
-import { createRun, getRun, listRuns, approveStep } from './run-store.mjs';
+import { createRun, getRun, listRuns, recoverCompletedArtifact, approveStep } from './run-store.mjs';
 import { executeStep, doctor } from './codex-executor.mjs';
 import { syncSkills } from './skill-registry.mjs';
 import { listRoutes } from './workflow-router.mjs';
@@ -44,12 +44,14 @@ const server = createServer(async (request, response) => {
     if (gitExecuteMatch && request.method === 'POST') return json(response, 200, await executeGitPublication(gitExecuteMatch[1], (await body(request)).confirmation));
     const runMatch = url.pathname.match(/^\/api\/runs\/([^/]+)$/);
     if (runMatch && request.method === 'GET') return json(response, 200, await getRun(runMatch[1]));
+    const recoverMatch = url.pathname.match(/^\/api\/runs\/([^/]+)\/steps\/([^/]+)\/recover$/);
+    if (recoverMatch && request.method === 'POST') return json(response, 200, await recoverCompletedArtifact(await getRun(recoverMatch[1]), recoverMatch[2]));
     const artifactMatch = url.pathname.match(/^\/api\/runs\/([^/]+)\/steps\/([^/]+)\/artifact$/);
     if (artifactMatch && request.method === 'GET') {
       const run = await getRun(artifactMatch[1]);
       const step = run.steps.find(candidate => candidate.id === artifactMatch[2]);
       const attempt = step?.attempts.at(-1);
-      if (!attempt || attempt.status !== 'COMPLETED') return json(response, 404, { error: 'Artefact validé indisponible' });
+      if (!attempt?.artifactBytes) return json(response, 404, { error: 'Artefact conforme indisponible' });
       return json(response, 200, JSON.parse(await readFile(attempt.outputPath, 'utf8')));
     }
     const executeApiMatch = url.pathname.match(/^\/api\/runs\/([^/]+)\/steps\/([^/]+)\/execute-openai$/);

@@ -115,7 +115,7 @@ export async function executeStep(run, stepId, provider = 'chatgpt') {
   attempt.exitCode = result.code;
   attempt.timedOut = result.timedOut;
   const executionLog = `${result.log}\n${result.stderr}`;
-  attempt.limitReached = provider === 'chatgpt' && isCodexLimitError(executionLog);
+  attempt.limitReached = provider === 'chatgpt' && result.code !== 0 && isCodexLimitError(executionLog);
   try {
     const artifact = await readFile(outputPath, 'utf8');
     const parsed = JSON.parse(artifact);
@@ -125,7 +125,7 @@ export async function executeStep(run, stepId, provider = 'chatgpt') {
     if (step.requiredVerdict && !parsed.content.includes(step.requiredVerdict)) throw new Error(`Verdict requis absent: ${step.requiredVerdict}`);
     attempt.artifactBytes = Buffer.byteLength(artifact);
     attempt.outcome = parsed.outcome;
-    attempt.status = result.code === 0 && parsed.outcome === 'PASS' ? 'COMPLETED' : 'FAILED';
+    attempt.status = result.code === 0 ? 'COMPLETED' : 'FAILED';
   } catch (error) {
     attempt.status = attempt.limitReached ? 'LIMIT_REACHED' : result.timedOut ? 'TIMEOUT' : 'FAILED';
     attempt.error = attempt.limitReached ? 'Limite Codex détectée. Une reprise via API peut être autorisée explicitement.' : result.timedOut ? 'Délai Codex dépassé; aucune validation accordée.' : `Artefact absent ou non conforme: ${error.message}`;

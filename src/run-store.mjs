@@ -42,6 +42,17 @@ export async function saveRun(run) {
   return run;
 }
 
+export async function recoverCompletedArtifact(run, stepId) {
+  const step = run.steps.find(candidate => candidate.id === stepId);
+  const attempt = step?.attempts.at(-1);
+  if (!step || !attempt?.artifactBytes || attempt.exitCode !== 0) throw new Error('Aucun artefact technique récupérable pour cette étape.');
+  attempt.status = 'COMPLETED';
+  attempt.recoveredAt = new Date().toISOString();
+  step.status = 'AWAITING_APPROVAL';
+  run.status = 'AWAITING_APPROVAL';
+  return saveRun(run);
+}
+
 export async function approveStep(run, stepId, decision, note = '') {
   const index = run.steps.findIndex(step => step.id === stepId);
   const step = run.steps[index];
