@@ -1,7 +1,7 @@
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { extname, join, resolve } from 'node:path';
-import { createRun, getRun, approveStep } from './run-store.mjs';
+import { createRun, getRun, listRuns, approveStep } from './run-store.mjs';
 import { executeStep, doctor } from './codex-executor.mjs';
 import { syncSkills } from './skill-registry.mjs';
 import { listRoutes } from './workflow-router.mjs';
@@ -36,6 +36,7 @@ const server = createServer(async (request, response) => {
     if (url.pathname === '/api/sites/inspect' && request.method === 'POST') return json(response, 200, await inspectSiteSource((await body(request)).source));
     if (url.pathname === '/api/sites/confirm' && request.method === 'POST') return json(response, 201, await confirmSite(await body(request)));
     if (url.pathname === '/api/skills/sync' && request.method === 'POST') return json(response, 200, await syncSkills());
+    if (url.pathname === '/api/runs' && request.method === 'GET') return json(response, 200, await listRuns());
     if (url.pathname === '/api/runs' && request.method === 'POST') return json(response, 201, await createRun(await body(request)));
     const gitPrepareMatch = url.pathname.match(/^\/api\/runs\/([^/]+)\/git\/prepare$/);
     if (gitPrepareMatch && request.method === 'POST') return json(response, 200, await prepareGitPublication(gitPrepareMatch[1], (await body(request)).mode));
@@ -64,7 +65,7 @@ const server = createServer(async (request, response) => {
     if (file.includes('..')) return json(response, 400, { error: 'Chemin invalide' });
     const content = await readFile(join(publicRoot, file));
     const types = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript' };
-    response.writeHead(200, { 'content-type': `${types[extname(file)] || 'application/octet-stream'}; charset=utf-8` });
+    response.writeHead(200, { 'content-type': `${types[extname(file)] || 'application/octet-stream'}; charset=utf-8`, 'cache-control': 'no-store' });
     response.end(content);
   } catch (error) {
     json(response, 500, { error: error.message });

@@ -1,4 +1,6 @@
 let run;
+let selectedStepId;
+let syncTimer;
 let sites = {};
 const builtInSite = { id: 'bloc-notes-numerique', name: 'Bloc-notes numériques', localPath: '/Users/marc/bloc-notes-numerique', language: 'fr-FR' };
 const escapeHtml = value => String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;');
@@ -10,6 +12,18 @@ const health = document.querySelector('#health');
 const workspace = document.querySelector('#workspace');
 const stepsNode = document.querySelector('#steps');
 const detail = document.querySelector('#step-detail');
+const expectedOutputs = {
+  audit: 'Un diagnostic, une décision éditoriale et la valeur existante à préserver.',
+  intent: 'L’intention, le périmètre, la tâche du lecteur et les chevauchements internes.',
+  evidence: 'Un registre de sources, claims, dates, niveaux de preuve et inconnues.',
+  brief: 'Un brief propre à la page, fondé sur l’intention et les preuves.',
+  writing: 'La rédaction ou correction intégrée à la source de vérité du site.',
+  editorial: 'Les rapports séparés de maillage, naturel, écriture et anti-AI-slop.',
+  'fact-check-final': 'La vérification des affirmations réellement présentes après les révisions.',
+  quality: 'Les contrôles SEO, techniques et éditoriaux applicables.',
+  'publish-review': 'Le verdict PASS — READY_FOR_HUMAN_VALIDATION ou FAIL — KEEP_NOINDEX.',
+  'final-review': 'La revue finale et les risques résiduels avant validation humaine.'
+};
 
 async function api(path, options) {
   const response = await fetch(path, { headers: { 'content-type': 'application/json' }, ...options });
@@ -36,11 +50,13 @@ async function refreshHealth() {
 
 function render(selectedId) {
   workspace.hidden = false;
-  const selected = run.steps.find(step => step.id === selectedId) || run.steps.find(step => step.status !== 'LOCKED') || run.steps[0];
+  selectedStepId = selectedId || selectedStepId;
+  const selected = run.steps.find(step => step.id === selectedStepId) || run.steps.find(step => step.status !== 'LOCKED') || run.steps[0];
+  selectedStepId = selected.id;
   stepsNode.innerHTML = run.steps.map((step, index) => `<li class="${step.id === selected.id ? 'active' : ''} ${step.status}" data-id="${step.id}"><span>${index + 1}</span><span>${step.label}<br><small>${step.status}</small></span></li>`).join('');
   stepsNode.querySelectorAll('li').forEach(node => node.addEventListener('click', () => render(node.dataset.id)));
   const last = selected.attempts.at(-1);
-  detail.innerHTML = `<p class="section-number">Étape contrôlée</p><h2>${selected.label}</h2><p class="status">${selected.status}</p><p>Skills originaux exigés :</p><ul class="skill-list">${selected.skills.map(skill => `<li>${skill}</li>`).join('')}</ul>${last ? `<p class="notice">Artefact : ${last.outputPath}<br>Commit : ${last.skillCommit}<br>Profil : ${last.siteProfile || '—'}<br>Exécuteur : ${last.provider === 'openai-api' ? 'API OpenAI' : 'Abonnement ChatGPT'}<br>Conflits contextuels : ${last.contextConflicts?.length || 0}<br>Statut technique : ${last.status}${last.startedAt ? `<br>Temps écoulé : <span id="elapsed">${elapsed(last.startedAt)}</span>` : ''}${last.error ? `<br>${escapeHtml(last.error)}` : ''}</p>` : ''}${selected.status === 'RUNNING' ? '<p class="notice">Exécution en cours. Cette page se rafraîchit automatiquement.</p>' : ''}<div id="artifact"></div><div id="message"></div><div class="actions">${last?.status === 'COMPLETED' ? '<button id="view-artifact" class="secondary">Consulter le livrable</button>' : ''}${['READY','REVISION_REQUIRED'].includes(selected.status) ? '<button id="execute">Exécuter avec Codex</button>' : ''}${selected.status === 'LIMIT_REACHED' ? '<button id="resume-openai">Reprendre avec l’API OpenAI</button>' : ''}${selected.status === 'AWAITING_APPROVAL' ? '<button id="approve">Valider et continuer</button><button id="reject" class="reject">Demander une correction</button>' : ''}${run.status === 'HUMAN_APPROVED' ? '<button id="prepare-branch">Préparer branche + pull request</button><button id="prepare-main" class="reject">Préparer push direct main</button>' : ''}</div>`;
+  detail.innerHTML = `<p class="section-number">Étape contrôlée</p><h2>${selected.label}</h2><p class="status">${selected.status}</p><p><strong>Livrable attendu :</strong> ${escapeHtml(expectedOutputs[selected.id] || selected.artifact)}</p><p>Skills originaux exigés :</p><ul class="skill-list">${selected.skills.map(skill => `<li>${skill}</li>`).join('')}</ul>${last ? `<p class="notice">Artefact : ${last.outputPath}<br>Commit : ${last.skillCommit}<br>Profil : ${last.siteProfile || '—'}<br>Exécuteur : ${last.provider === 'openai-api' ? 'API OpenAI' : 'Abonnement ChatGPT'}<br>Conflits contextuels : ${last.contextConflicts?.length || 0}<br>Statut technique : ${last.status}${last.startedAt ? `<br>Temps écoulé : <span id="elapsed">${elapsed(last.startedAt)}</span>` : ''}${last.error ? `<br>${escapeHtml(last.error)}` : ''}</p>` : ''}${selected.status === 'RUNNING' ? `<p class="notice">Exécution en cours. Dernière activité : ${escapeHtml(last?.lastActivityAt ? new Date(last.lastActivityAt).toLocaleTimeString() : 'initialisation')}. Cette page se rafraîchit automatiquement.</p>` : ''}${last?.events?.length ? `<details open><summary>Activité récente</summary><ol class="activity">${last.events.slice(-12).map(event => `<li><time>${escapeHtml(new Date(event.at).toLocaleTimeString())}</time> ${escapeHtml(event.label)}</li>`).join('')}</ol></details>` : ''}<div id="artifact"></div><div id="message"></div><div class="actions">${last?.status === 'COMPLETED' ? '<button id="view-artifact" class="secondary">Consulter le livrable</button>' : ''}${['READY','REVISION_REQUIRED'].includes(selected.status) ? '<button id="execute">Exécuter avec Codex</button>' : ''}${selected.status === 'LIMIT_REACHED' ? '<button id="resume-openai">Reprendre avec l’API OpenAI</button>' : ''}${selected.status === 'AWAITING_APPROVAL' ? '<button id="approve">Valider et continuer</button><button id="reject" class="reject">Demander une correction</button>' : ''}${run.status === 'HUMAN_APPROVED' ? '<button id="prepare-branch">Préparer branche + pull request</button><button id="prepare-main" class="reject">Préparer push direct main</button>' : ''}</div>`;
   detail.querySelector('#view-artifact')?.addEventListener('click', () => viewArtifact(selected.id));
   detail.querySelector('#execute')?.addEventListener('click', () => execute(selected.id, 'chatgpt'));
   detail.querySelector('#resume-openai')?.addEventListener('click', () => execute(selected.id, 'openai-api'));
@@ -57,23 +73,42 @@ async function viewArtifact(id) {
   } catch (error) { detail.querySelector('#message').innerHTML = `<p class="notice error">${error.message}</p>`; }
 }
 
+function startRunSync() {
+  clearInterval(syncTimer);
+  syncTimer = setInterval(async () => {
+    if (!run) return;
+    try {
+      run = await api(`/api/runs/${run.id}`);
+      render(selectedStepId);
+      if (!run.steps.some(step => step.status === 'RUNNING')) clearInterval(syncTimer);
+    } catch {}
+  }, 2000);
+}
+
+async function restoreRun() {
+  const runs = await api('/api/runs');
+  const savedId = localStorage.getItem('editorial-active-run');
+  run = runs.find(candidate => candidate.id === savedId) || runs.find(candidate => candidate.steps.some(step => step.status === 'RUNNING'));
+  if (!run) return;
+  document.querySelector('#setup').hidden = true;
+  render();
+  if (run.steps.some(step => step.status === 'RUNNING')) startRunSync();
+}
+
 async function execute(id, provider) {
   if (provider === 'openai-api' && !confirm('Cette reprise utilise l’API OpenAI facturée séparément. Continuer ?')) return;
   const endpoint = provider === 'openai-api' ? 'execute-openai' : 'execute';
   const request = api(`/api/runs/${run.id}/steps/${id}/${endpoint}`, { method: 'POST' });
-  const poll = setInterval(async () => {
-    try {
-      run = await api(`/api/runs/${run.id}`);
-      render(id);
-    } catch {}
-  }, 2000);
+  startRunSync();
   try {
     run = await request;
     render(id);
   } catch (error) {
+    run = await api(`/api/runs/${run.id}`);
+    render(id);
     const message = detail.querySelector('#message');
     if (message) message.innerHTML = `<p class="notice error">${escapeHtml(error.message)}</p>`;
-  } finally { clearInterval(poll); }
+  }
 }
 
 async function prepareGit(mode) {
@@ -114,9 +149,10 @@ document.querySelector('#site-form').addEventListener('submit', async event => {
 document.querySelector('#run-form').addEventListener('submit', async event => {
   event.preventDefault();
   const input = Object.fromEntries(new FormData(event.currentTarget));
-  try { run = await api('/api/runs', { method: 'POST', body: JSON.stringify(input) }); document.querySelector('#setup').hidden = true; render(); }
+  try { run = await api('/api/runs', { method: 'POST', body: JSON.stringify(input) }); localStorage.setItem('editorial-active-run', run.id); document.querySelector('#setup').hidden = true; render(); }
   catch (error) { alert(error.message); }
 });
 
 await refreshSites();
+await restoreRun();
 refreshHealth();

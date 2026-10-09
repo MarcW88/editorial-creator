@@ -10,6 +10,16 @@ const artifactSchema = join(root, 'config', 'artifact-schema.json');
 
 export const isCodexLimitError = log => /(usage.?limit|rate.?limit|quota|too many requests|status.?429)/i.test(log);
 
+function activityLabel(event) {
+  if (event.type === 'thread.started') return 'Session agent démarrée';
+  if (event.type === 'turn.started') return 'Analyse en cours';
+  if (event.type === 'turn.completed') return 'Réponse agent terminée';
+  if (event.type === 'turn.failed') return 'Exécution agent en échec';
+  if (event.type === 'error') return `Erreur ou reconnexion: ${event.message || 'détail indisponible'}`;
+  if (event.type === 'item.completed') return event.item?.type === 'agent_message' ? 'Livrable final reçu' : `Action terminée: ${event.item?.type || 'agent'}`;
+  return null;
+}
+
 const commandExists = command => new Promise(resolveExists => {
   const child = spawn(command, ['--version']);
   child.on('error', () => resolveExists(false));
@@ -53,10 +63,11 @@ export async function executeStep(run, stepId, provider = 'chatgpt') {
   const logPath = join(runDir, `${step.id}${suffix}.jsonl`);
   step.status = 'RUNNING';
   run.status = 'RUNNING';
-  const attempt = { startedAt: new Date().toISOString(), provider, skills, skillCommit: health.registry.commit, siteProfile: profile.id, contextConflicts, outputPath, logPath, status: 'RUNNING' };
+  const attempt = { startedAt: new Date().toISOString(), provider, skills, skillCommit: health.registry.commit, siteProfile: profile.id, contextConflicts, outputPath, logPath, status: 'RUNNING', events: [] };
   step.attempts.push(attempt);
   await saveRun(run);
 
+  let progressSave = Promise.resolve();
   const result = await new Promise((resolveExec, reject) => {
     const model = provider === 'openai-api' ? (process.env.OPENAI_API_MODEL || 'gpt-5.4') : 'gpt-6.1-sol';
     const env = provider === 'openai-api' ? { ...process.env, CODEX_API_KEY: process.env.OPENAI_API_KEY } : process.env;
@@ -68,14 +79,37 @@ export async function executeStep(run, stepId, provider = 'chatgpt') {
     }, Number(process.env.CODEX_TIMEOUT_MS || 900_000));
     let log = '';
     let stderr = '';
-    child.stdout.on('data', chunk => log += chunk);
-    child.stderr.on('data', chunk => stderr += chunk);
+    let buffer = '';
+    let lastSavedAt = 0;
+    child.stdout.on('data', chunk => {
+      const text = chunk.toString();
+      log += text;
+      buffer += text;
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+      for (const line of lines) {
+        try {
+          const label = activityLabel(JSON.parse(line));
+          if (label) attempt.events.push({ at: new Date().toISOString(), label });
+        } catch {}
+      }
+      attempt.lastActivityAt = new Date().toISOString();
+      if (Date.now() - lastSavedAt > 1500) {
+        lastSavedAt = Date.now();
+        progressSave = progressSave.then(() => saveRun(run)).catch(() => {});
+      }
+    });
+    child.stderr.on('data', chunk => {
+      stderr += chunk;
+      attempt.lastActivityAt = new Date().toISOString();
+    });
     child.on('error', reject);
     child.on('close', code => {
       clearTimeout(timeout);
       resolveExec({ code, log, stderr, timedOut });
     });
   });
+  await progressSave;
   await writeFile(logPath, result.log + (result.stderr ? `\n${result.stderr}` : ''));
   attempt.finishedAt = new Date().toISOString();
   attempt.exitCode = result.code;

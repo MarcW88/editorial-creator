@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { buildWorkflow } from './workflow-router.mjs';
@@ -27,6 +27,12 @@ export async function createRun(input) {
 
 export async function getRun(id) {
   return JSON.parse(await readFile(pathFor(id), 'utf8'));
+}
+
+export async function listRuns() {
+  const files = await readdir(runsRoot).catch(() => []);
+  const runs = await Promise.all(files.filter(file => file.endsWith('.json')).map(file => getRun(file.slice(0, -5))));
+  return runs.sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
 }
 
 export async function saveRun(run) {
