@@ -175,8 +175,14 @@ async function prepareGit(mode) {
 }
 
 async function decide(id, decision) {
-  const note = decision === 'reject' ? prompt('Correction demandée :') || '' : '';
-  try { run = await api(`/api/runs/${run.id}/steps/${id}/approval`, { method: 'POST', body: JSON.stringify({ decision, note }) }); render(id); }
+  const selected = run.steps.find(step => step.id === id);
+  const defaultCorrection = selected?.mode === 'PUBLISH_REVIEW' ? 'Intégrer le brouillon dans la source réelle du site, corriger les blockers du Publish Review, puis rejouer révisions, fact-check, QA et revue finale.' : 'Corriger les problèmes indiqués dans le livrable puis rejouer cette étape.';
+  const note = decision === 'reject' ? prompt('Consigne de correction :', defaultCorrection) || defaultCorrection : '';
+  try {
+    run = await api(`/api/runs/${run.id}/steps/${id}/approval`, { method: 'POST', body: JSON.stringify({ decision, note }) });
+    const next = run.steps.find(step => ['REVISION_REQUIRED', 'READY'].includes(step.status));
+    render(next?.id || id);
+  }
   catch (error) { detail.querySelector('#message').innerHTML = `<p class="notice error">${error.message}</p>`; }
 }
 
