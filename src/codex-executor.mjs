@@ -45,7 +45,7 @@ function promptFor(run, step, bundles, outputPath, profile, conflicts, provider)
 
 export async function executeStep(run, stepId, provider = 'chatgpt') {
   const step = run.steps.find(candidate => candidate.id === stepId);
-  const allowedStatuses = provider === 'openai-api' ? ['LIMIT_REACHED'] : ['READY', 'REVISION_REQUIRED'];
+  const allowedStatuses = provider === 'openai-api' ? ['LIMIT_REACHED'] : ['READY', 'REVISION_REQUIRED', 'FAILED', 'TIMEOUT'];
   if (!step || !allowedStatuses.includes(step.status)) throw new Error('Étape verrouillée ou déjà exécutée.');
   const health = await doctor();
   if (!health.codexInstalled || !health.registry.valid) throw new Error('Diagnostic Codex/skills invalide.');
@@ -76,7 +76,7 @@ export async function executeStep(run, stepId, provider = 'chatgpt') {
     const timeout = setTimeout(() => {
       timedOut = true;
       child.kill('SIGTERM');
-    }, Number(process.env.CODEX_TIMEOUT_MS || 900_000));
+    }, Number(process.env.CODEX_TIMEOUT_MS || 3_600_000));
     let log = '';
     let stderr = '';
     let buffer = '';
