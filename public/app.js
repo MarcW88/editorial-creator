@@ -2,6 +2,10 @@ let run;
 let sites = {};
 const builtInSite = { id: 'bloc-notes-numerique', name: 'Bloc-notes numériques', localPath: '/Users/marc/bloc-notes-numerique', language: 'fr-FR' };
 const escapeHtml = value => String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;');
+const elapsed = startedAt => {
+  const seconds = Math.max(0, Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000));
+  return `${Math.floor(seconds / 60)} min ${seconds % 60} s`;
+};
 const health = document.querySelector('#health');
 const workspace = document.querySelector('#workspace');
 const stepsNode = document.querySelector('#steps');
@@ -25,7 +29,7 @@ async function refreshHealth() {
   try {
     const value = await api('/api/health');
     health.textContent = value.codexInstalled && value.chatGptAuthenticated && value.registry.valid
-      ? `Prêt · ${value.registry.skillCount} skills · ${value.registry.commit.slice(0, 7)}`
+      ? `Prêt · ${value.registry.skillCount} skills · ${value.openAiApiConfigured ? 'API disponible' : 'API non configurée'} · ${value.registry.commit.slice(0, 7)}`
       : 'Configuration incomplète';
   } catch { health.textContent = 'Diagnostic indisponible'; }
 }
@@ -36,9 +40,10 @@ function render(selectedId) {
   stepsNode.innerHTML = run.steps.map((step, index) => `<li class="${step.id === selected.id ? 'active' : ''} ${step.status}" data-id="${step.id}"><span>${index + 1}</span><span>${step.label}<br><small>${step.status}</small></span></li>`).join('');
   stepsNode.querySelectorAll('li').forEach(node => node.addEventListener('click', () => render(node.dataset.id)));
   const last = selected.attempts.at(-1);
-  detail.innerHTML = `<p class="section-number">Étape contrôlée</p><h2>${selected.label}</h2><p class="status">${selected.status}</p><p>Skills originaux exigés :</p><ul class="skill-list">${selected.skills.map(skill => `<li>${skill}</li>`).join('')}</ul>${last ? `<p class="notice">Artefact : ${last.outputPath}<br>Commit : ${last.skillCommit}<br>Profil : ${last.siteProfile || '—'}<br>Conflits contextuels : ${last.contextConflicts?.length || 0}<br>Statut technique : ${last.status}</p>` : ''}<div id="artifact"></div><div id="message"></div><div class="actions">${last?.status === 'COMPLETED' ? '<button id="view-artifact" class="secondary">Consulter le livrable</button>' : ''}${['READY','REVISION_REQUIRED'].includes(selected.status) ? '<button id="execute">Exécuter avec Codex</button>' : ''}${selected.status === 'AWAITING_APPROVAL' ? '<button id="approve">Valider et continuer</button><button id="reject" class="reject">Demander une correction</button>' : ''}${run.status === 'HUMAN_APPROVED' ? '<button id="prepare-branch">Préparer branche + pull request</button><button id="prepare-main" class="reject">Préparer push direct main</button>' : ''}</div>`;
+  detail.innerHTML = `<p class="section-number">Étape contrôlée</p><h2>${selected.label}</h2><p class="status">${selected.status}</p><p>Skills originaux exigés :</p><ul class="skill-list">${selected.skills.map(skill => `<li>${skill}</li>`).join('')}</ul>${last ? `<p class="notice">Artefact : ${last.outputPath}<br>Commit : ${last.skillCommit}<br>Profil : ${last.siteProfile || '—'}<br>Exécuteur : ${last.provider === 'openai-api' ? 'API OpenAI' : 'Abonnement ChatGPT'}<br>Conflits contextuels : ${last.contextConflicts?.length || 0}<br>Statut technique : ${last.status}${last.startedAt ? `<br>Temps écoulé : <span id="elapsed">${elapsed(last.startedAt)}</span>` : ''}${last.error ? `<br>${escapeHtml(last.error)}` : ''}</p>` : ''}${selected.status === 'RUNNING' ? '<p class="notice">Exécution en cours. Cette page se rafraîchit automatiquement.</p>' : ''}<div id="artifact"></div><div id="message"></div><div class="actions">${last?.status === 'COMPLETED' ? '<button id="view-artifact" class="secondary">Consulter le livrable</button>' : ''}${['READY','REVISION_REQUIRED'].includes(selected.status) ? '<button id="execute">Exécuter avec Codex</button>' : ''}${selected.status === 'LIMIT_REACHED' ? '<button id="resume-openai">Reprendre avec l’API OpenAI</button>' : ''}${selected.status === 'AWAITING_APPROVAL' ? '<button id="approve">Valider et continuer</button><button id="reject" class="reject">Demander une correction</button>' : ''}${run.status === 'HUMAN_APPROVED' ? '<button id="prepare-branch">Préparer branche + pull request</button><button id="prepare-main" class="reject">Préparer push direct main</button>' : ''}</div>`;
   detail.querySelector('#view-artifact')?.addEventListener('click', () => viewArtifact(selected.id));
-  detail.querySelector('#execute')?.addEventListener('click', () => execute(selected.id));
+  detail.querySelector('#execute')?.addEventListener('click', () => execute(selected.id, 'chatgpt'));
+  detail.querySelector('#resume-openai')?.addEventListener('click', () => execute(selected.id, 'openai-api'));
   detail.querySelector('#approve')?.addEventListener('click', () => decide(selected.id, 'approve'));
   detail.querySelector('#reject')?.addEventListener('click', () => decide(selected.id, 'reject'));
   detail.querySelector('#prepare-branch')?.addEventListener('click', () => prepareGit('branch'));
@@ -52,11 +57,23 @@ async function viewArtifact(id) {
   } catch (error) { detail.querySelector('#message').innerHTML = `<p class="notice error">${error.message}</p>`; }
 }
 
-async function execute(id) {
-  const message = detail.querySelector('#message');
-  message.innerHTML = '<p class="notice">Codex exécute cette étape. Les étapes suivantes restent verrouillées.</p>';
-  try { run = await api(`/api/runs/${run.id}/steps/${id}/execute`, { method: 'POST' }); render(id); }
-  catch (error) { message.innerHTML = `<p class="notice error">${error.message}</p>`; }
+async function execute(id, provider) {
+  if (provider === 'openai-api' && !confirm('Cette reprise utilise l’API OpenAI facturée séparément. Continuer ?')) return;
+  const endpoint = provider === 'openai-api' ? 'execute-openai' : 'execute';
+  const request = api(`/api/runs/${run.id}/steps/${id}/${endpoint}`, { method: 'POST' });
+  const poll = setInterval(async () => {
+    try {
+      run = await api(`/api/runs/${run.id}`);
+      render(id);
+    } catch {}
+  }, 2000);
+  try {
+    run = await request;
+    render(id);
+  } catch (error) {
+    const message = detail.querySelector('#message');
+    if (message) message.innerHTML = `<p class="notice error">${escapeHtml(error.message)}</p>`;
+  } finally { clearInterval(poll); }
 }
 
 async function prepareGit(mode) {

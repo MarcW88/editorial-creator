@@ -51,8 +51,10 @@ const server = createServer(async (request, response) => {
       if (!attempt || attempt.status !== 'COMPLETED') return json(response, 404, { error: 'Artefact validé indisponible' });
       return json(response, 200, JSON.parse(await readFile(attempt.outputPath, 'utf8')));
     }
+    const executeApiMatch = url.pathname.match(/^\/api\/runs\/([^/]+)\/steps\/([^/]+)\/execute-openai$/);
+    if (executeApiMatch && request.method === 'POST') return json(response, 200, await executeStep(await getRun(executeApiMatch[1]), executeApiMatch[2], 'openai-api'));
     const executeMatch = url.pathname.match(/^\/api\/runs\/([^/]+)\/steps\/([^/]+)\/execute$/);
-    if (executeMatch && request.method === 'POST') return json(response, 200, await executeStep(await getRun(executeMatch[1]), executeMatch[2]));
+    if (executeMatch && request.method === 'POST') return json(response, 200, await executeStep(await getRun(executeMatch[1]), executeMatch[2], 'chatgpt'));
     const approveMatch = url.pathname.match(/^\/api\/runs\/([^/]+)\/steps\/([^/]+)\/approval$/);
     if (approveMatch && request.method === 'POST') {
       const input = await body(request);

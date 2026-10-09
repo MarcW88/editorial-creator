@@ -25,7 +25,15 @@ npm start
 
 Ouvrir ensuite `http://127.0.0.1:4310`.
 
-Les exécutions Codex disposent par défaut de 15 minutes. La limite peut être ajustée avec `CODEX_TIMEOUT_MS`, sans désactiver le blocage en cas d’absence d’artefact.
+Les exécutions Codex disposent par défaut de 15 minutes. La limite peut être ajustée avec `CODEX_TIMEOUT_MS`, sans désactiver le blocage en cas d’absence d’artefact. L’interface affiche `RUNNING`, le temps écoulé et rafraîchit automatiquement l’état jusqu’au résultat.
+
+En cas de limite d’usage Codex détectée, aucune bascule payante n’est automatique. Pour afficher le bouton de reprise API, lancer le serveur avec `OPENAI_API_KEY` dans son environnement. Le modèle peut être choisi avec `OPENAI_API_MODEL` (`gpt-5.4` par défaut) :
+
+```bash
+OPENAI_API_KEY=... OPENAI_API_MODEL=gpt-5.4 npm start
+```
+
+Ne jamais enregistrer la clé dans le dépôt ou la saisir dans l’interface. Chaque reprise API demande une confirmation explicite et concerne uniquement l’étape en échec.
 
 ## Fonctionnement
 
