@@ -71,7 +71,7 @@ export async function executeStep(run, stepId, provider = 'chatgpt') {
   const result = await new Promise((resolveExec, reject) => {
     const model = provider === 'openai-api' ? (process.env.OPENAI_API_MODEL || 'gpt-5.4') : 'gpt-6.1-sol';
     const env = provider === 'openai-api' ? { ...process.env, CODEX_API_KEY: process.env.OPENAI_API_KEY } : process.env;
-    const child = spawn('codex', ['exec', '--ephemeral', '--json', '--model', model, '--output-schema', artifactSchema, '--output-last-message', outputPath, '-c', 'model_reasoning_effort="low"', '--sandbox', 'workspace-write', '--add-dir', bundles[0].path.split('/.agents/')[0], '--add-dir', profile.localPath, '-C', root, promptFor(run, step, bundles, outputPath, profile, contextConflicts, provider)], { cwd: root, env });
+    const child = spawn('codex', ['exec', '--ephemeral', '--json', '--model', model, '--output-schema', artifactSchema, '--output-last-message', outputPath, '-c', 'model_reasoning_effort="low"', '--sandbox', 'workspace-write', '--add-dir', bundles[0].path.split('/.agents/')[0], '--add-dir', profile.localPath, '-C', root, promptFor(run, step, bundles, outputPath, profile, contextConflicts, provider)], { cwd: root, env, stdio: ['ignore', 'pipe', 'pipe'] });
     let timedOut = false;
     const timeout = setTimeout(() => {
       timedOut = true;
