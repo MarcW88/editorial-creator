@@ -1,4 +1,6 @@
 let run;
+let sites = {};
+const builtInSite = { id: 'bloc-notes-numerique', name: 'Bloc-notes numériques', localPath: '/Users/marc/bloc-notes-numerique', language: 'fr-FR' };
 const escapeHtml = value => String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;');
 const health = document.querySelector('#health');
 const workspace = document.querySelector('#workspace');
@@ -10,6 +12,13 @@ async function api(path, options) {
   const value = await response.json();
   if (!response.ok) throw new Error(value.error || 'Erreur inattendue');
   return value;
+}
+
+async function refreshSites() {
+  sites = { [builtInSite.id]: builtInSite, ...await api('/api/sites') };
+  const select = document.querySelector('#site-profile');
+  select.innerHTML = Object.values(sites).map(site => `<option value="${escapeHtml(site.id)}">${escapeHtml(site.name)} · ${escapeHtml(site.language)}</option>`).join('');
+  select.dispatchEvent(new Event('change'));
 }
 
 async function refreshHealth() {
@@ -27,11 +36,13 @@ function render(selectedId) {
   stepsNode.innerHTML = run.steps.map((step, index) => `<li class="${step.id === selected.id ? 'active' : ''} ${step.status}" data-id="${step.id}"><span>${index + 1}</span><span>${step.label}<br><small>${step.status}</small></span></li>`).join('');
   stepsNode.querySelectorAll('li').forEach(node => node.addEventListener('click', () => render(node.dataset.id)));
   const last = selected.attempts.at(-1);
-  detail.innerHTML = `<p class="section-number">Étape contrôlée</p><h2>${selected.label}</h2><p class="status">${selected.status}</p><p>Skills originaux exigés :</p><ul class="skill-list">${selected.skills.map(skill => `<li>${skill}</li>`).join('')}</ul>${last ? `<p class="notice">Artefact : ${last.outputPath}<br>Commit : ${last.skillCommit}<br>Profil : ${last.siteProfile || '—'}<br>Conflits contextuels : ${last.contextConflicts?.length || 0}<br>Statut technique : ${last.status}</p>` : ''}<div id="artifact"></div><div id="message"></div><div class="actions">${last?.status === 'COMPLETED' ? '<button id="view-artifact" class="secondary">Consulter le livrable</button>' : ''}${['READY','REVISION_REQUIRED'].includes(selected.status) ? '<button id="execute">Exécuter avec Codex</button>' : ''}${selected.status === 'AWAITING_APPROVAL' ? '<button id="approve">Valider et continuer</button><button id="reject" class="reject">Demander une correction</button>' : ''}</div>`;
+  detail.innerHTML = `<p class="section-number">Étape contrôlée</p><h2>${selected.label}</h2><p class="status">${selected.status}</p><p>Skills originaux exigés :</p><ul class="skill-list">${selected.skills.map(skill => `<li>${skill}</li>`).join('')}</ul>${last ? `<p class="notice">Artefact : ${last.outputPath}<br>Commit : ${last.skillCommit}<br>Profil : ${last.siteProfile || '—'}<br>Conflits contextuels : ${last.contextConflicts?.length || 0}<br>Statut technique : ${last.status}</p>` : ''}<div id="artifact"></div><div id="message"></div><div class="actions">${last?.status === 'COMPLETED' ? '<button id="view-artifact" class="secondary">Consulter le livrable</button>' : ''}${['READY','REVISION_REQUIRED'].includes(selected.status) ? '<button id="execute">Exécuter avec Codex</button>' : ''}${selected.status === 'AWAITING_APPROVAL' ? '<button id="approve">Valider et continuer</button><button id="reject" class="reject">Demander une correction</button>' : ''}${run.status === 'HUMAN_APPROVED' ? '<button id="prepare-branch">Préparer branche + pull request</button><button id="prepare-main" class="reject">Préparer push direct main</button>' : ''}</div>`;
   detail.querySelector('#view-artifact')?.addEventListener('click', () => viewArtifact(selected.id));
   detail.querySelector('#execute')?.addEventListener('click', () => execute(selected.id));
   detail.querySelector('#approve')?.addEventListener('click', () => decide(selected.id, 'approve'));
   detail.querySelector('#reject')?.addEventListener('click', () => decide(selected.id, 'reject'));
+  detail.querySelector('#prepare-branch')?.addEventListener('click', () => prepareGit('branch'));
+  detail.querySelector('#prepare-main')?.addEventListener('click', () => prepareGit('main'));
 }
 
 async function viewArtifact(id) {
@@ -48,11 +59,40 @@ async function execute(id) {
   catch (error) { message.innerHTML = `<p class="notice error">${error.message}</p>`; }
 }
 
+async function prepareGit(mode) {
+  try {
+    const publication = await api(`/api/runs/${run.id}/git/prepare`, { method: 'POST', body: JSON.stringify({ mode }) });
+    const confirmation = prompt(`Fichiers concernés:\n${publication.files.join('\n')}\n\nTapez ${mode === 'main' ? 'PUSH_MAIN' : 'PUSH_BRANCH'} pour confirmer.`);
+    if (!confirmation) return;
+    const result = await api(`/api/runs/${run.id}/git/execute`, { method: 'POST', body: JSON.stringify({ confirmation }) });
+    detail.querySelector('#message').innerHTML = `<p class="notice">Push terminé: ${escapeHtml(result.commit)}<br>${escapeHtml(result.pullRequest?.url || result.pullRequest?.instruction || 'main mis à jour')}</p>`;
+  } catch (error) { detail.querySelector('#message').innerHTML = `<p class="notice error">${escapeHtml(error.message)}</p>`; }
+}
+
 async function decide(id, decision) {
   const note = decision === 'reject' ? prompt('Correction demandée :') || '' : '';
   try { run = await api(`/api/runs/${run.id}/steps/${id}/approval`, { method: 'POST', body: JSON.stringify({ decision, note }) }); render(id); }
   catch (error) { detail.querySelector('#message').innerHTML = `<p class="notice error">${error.message}</p>`; }
 }
+
+document.querySelector('#site-profile').addEventListener('change', event => {
+  const site = sites[event.target.value];
+  if (site) document.querySelector('[name="sitePath"]').value = site.localPath;
+});
+
+document.querySelector('#site-form').addEventListener('submit', async event => {
+  event.preventDefault();
+  const values = Object.fromEntries(new FormData(event.currentTarget));
+  const message = document.querySelector('#site-message');
+  try {
+    const candidate = await api('/api/sites/inspect', { method: 'POST', body: JSON.stringify({ localPath: values.localPath }) });
+    const profile = await api('/api/sites/confirm', { method: 'POST', body: JSON.stringify({ ...candidate, language: values.language, topic: values.topic }) });
+    message.innerHTML = `<p class="notice">Profil ${escapeHtml(profile.name)} validé. Stack détectée: ${escapeHtml(profile.stack)}.</p>`;
+    await refreshSites();
+    document.querySelector('#site-profile').value = profile.id;
+    document.querySelector('#site-profile').dispatchEvent(new Event('change'));
+  } catch (error) { message.innerHTML = `<p class="notice error">${escapeHtml(error.message)}</p>`; }
+});
 
 document.querySelector('#run-form').addEventListener('submit', async event => {
   event.preventDefault();
@@ -61,4 +101,5 @@ document.querySelector('#run-form').addEventListener('submit', async event => {
   catch (error) { alert(error.message); }
 });
 
+await refreshSites();
 refreshHealth();

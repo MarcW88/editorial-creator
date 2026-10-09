@@ -1,18 +1,20 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { buildWorkflow } from './workflow-router.mjs';
 
 const root = resolve(import.meta.dirname, '..');
 const runsRoot = join(root, 'runs');
-const workflow = JSON.parse(await readFile(join(root, 'config', 'guide-workflow.json'), 'utf8'));
 const pathFor = id => join(runsRoot, `${id}.json`);
 
 export async function createRun(input) {
+  const workflow = buildWorkflow(input);
   const id = randomUUID();
   const now = new Date().toISOString();
   const run = {
     id,
     workflow: workflow.id,
+    section: workflow.section,
     createdAt: now,
     updatedAt: now,
     status: 'READY',
@@ -50,5 +52,3 @@ export async function approveStep(run, stepId, decision, note = '') {
   }
   return saveRun(run);
 }
-
-export { workflow };

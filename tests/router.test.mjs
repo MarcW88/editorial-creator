@@ -1,0 +1,28 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { detectSection, buildWorkflow } from '../src/workflow-router.mjs';
+
+test('route chaque section vers ses workflows originaux', () => {
+  assert.equal(detectSection('/guides/test/').analysis, 'guide-analysis-workflow');
+  assert.equal(detectSection('/comparatifs/test/').content, 'comparison-content-workflow');
+  assert.equal(detectSection('/marques/test/').analysis, 'brand-analysis-workflow');
+  assert.equal(detectSection('/usages/test/').content, 'usage-content-workflow');
+  assert.equal(detectSection('/bons-plans/test/').analysis, 'deal-analysis-workflow');
+  assert.equal(detectSection('/a-propos/').content, 'trust-content-workflow');
+});
+
+test('une page existante commence par un audit et finit par le publish review', () => {
+  const workflow = buildWorkflow({ target: '/comparatifs/test/', operation: 'audit-update' });
+  assert.equal(workflow.steps[0].mode, 'AUDIT');
+  assert.equal(workflow.steps.at(-1).mode, 'PUBLISH_REVIEW');
+});
+
+test('une création ne fabrique pas un audit préalable', () => {
+  const workflow = buildWorkflow({ target: '/usages/test/', operation: 'create' });
+  assert.notEqual(workflow.steps[0].id, 'audit');
+  assert.ok(workflow.steps.some(step => step.skills.includes('usage-content-workflow')));
+});
+
+test('une section inconnue est refusée', () => {
+  assert.throws(() => detectSection('/inconnue/test/'), /Aucun workflow/);
+});

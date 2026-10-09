@@ -1,5 +1,6 @@
 node_modules/
 .editorial-cache/
+.editorial-data/
 runs/*
 !runs/.gitkeep
 .env

@@ -19,16 +19,27 @@
       <p>Chaque skill est chargé depuis un commit verrouillé, exécuté séparément et contrôlé avant que la suite ne soit accessible.</p>
     </section>
 
+    <section class="onboarding" aria-labelledby="onboarding-title">
+      <div><p class="section-number">Nouveau site</p><h2 id="onboarding-title">Connecter un dépôt</h2></div>
+      <form id="site-form">
+        <label>Chemin local du dépôt<input name="localPath" placeholder="/Users/marc/mon-site" required></label>
+        <label>Langue<input name="language" placeholder="fr-FR" required></label>
+        <label>Thématique<input name="topic" placeholder="Sujet principal du site" required></label>
+        <button type="submit">Inspecter et valider le profil</button>
+        <div id="site-message"></div>
+      </form>
+    </section>
+
     <section id="setup" class="setup" aria-labelledby="setup-title">
       <div>
         <p class="section-number">Nouveau dossier</p>
         <h2 id="setup-title">Préparer un guide</h2>
       </div>
       <form id="run-form">
-        <label>Profil éditorial<select name="siteProfile"><option value="bloc-notes-numerique">Bloc-notes numériques · FR</option></select></label>
+        <label>Profil éditorial<select id="site-profile" name="siteProfile"><option value="bloc-notes-numerique">Bloc-notes numériques · FR</option></select></label>
         <label>Chemin local du site<input name="sitePath" value="/Users/marc/bloc-notes-numerique" required></label>
         <label>URL ou slug à traiter<input name="target" placeholder="/guides/exemple/" required></label>
-        <label>Opération<select name="operation"><option value="audit-update">Auditer puis actualiser</option><option value="create">Créer un guide</option></select></label>
+        <label>Opération<select name="operation"><option value="audit-update">Auditer puis actualiser</option><option value="create">Créer un nouveau contenu</option></select></label>
         <label>Consigne éditoriale<textarea name="request" rows="3" placeholder="Objectif, données disponibles, contraintes…"></textarea></label>
         <button type="submit">Créer l’exécution</button>
       </form>

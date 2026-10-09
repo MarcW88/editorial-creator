@@ -1,0 +1,18 @@
+{
+  "routes": [
+    {"section":"guide","prefixes":["/guides/"],"analysis":"guide-analysis-workflow","content":"guide-content-workflow"},
+    {"section":"comparison","prefixes":["/comparatifs/"],"analysis":"comparison-analysis-workflow","content":"comparison-content-workflow"},
+    {"section":"brand","prefixes":["/marques/"],"analysis":"brand-analysis-workflow","content":"brand-content-workflow"},
+    {"section":"usage","prefixes":["/usages/"],"analysis":"usage-analysis-workflow","content":"usage-content-workflow"},
+    {"section":"deal","prefixes":["/bons-plans/"],"analysis":"deal-analysis-workflow","content":"deal-content-workflow"},
+    {"section":"trust","exact":["/methode-de-test/","/comment-nous-comparons/","/a-propos/","/contact/","/transparence-affiliation/","/mentions-legales/"],"content":"trust-content-workflow"}
+  ],
+  "sectionSkills": {
+    "guide":{"intent":["seo-keyword","search-intent"],"evidence":["fact-check","evidence-based-reviews"],"brief":["affiliate-value","content-brief-authoring"],"writing":["content-and-copy"],"editorial":["internal-linking-audit","humanizer","general-writing","anti-ai-slop"],"quality":["seo-onpage","seo-technical","seo-best-practices","editorial-qa"]},
+    "comparison":{"intent":["seo-keyword","jobs-to-be-done","seo-content-audit"],"evidence":["evidence-based-reviews","fact-check","affiliate-value"],"brief":["content-brief-authoring"],"writing":["content-and-copy"],"editorial":["humanizer","general-writing","anti-ai-slop","internal-linking-audit"],"quality":["seo-onpage","seo-technical","editorial-qa"]},
+    "brand":{"intent":["content-audit","search-intent","content-refresh"],"evidence":["affiliate-value","fact-check","evidence-based-reviews"],"brief":["content-brief-authoring"],"writing":["content-and-copy"],"editorial":["internal-linking-audit","humanizer","general-writing","anti-ai-slop"],"quality":["seo-technical","seo-best-practices","editorial-qa"]},
+    "usage":{"intent":["content-audit","search-intent","jobs-to-be-done","content-refresh"],"evidence":["affiliate-value","fact-check","evidence-based-reviews"],"brief":["content-brief-authoring"],"writing":["content-and-copy"],"editorial":["internal-linking-audit","humanizer","general-writing","anti-ai-slop"],"quality":["seo-technical","seo-best-practices","editorial-qa"]},
+    "deal":{"intent":["seo-content-audit","seo-keyword","search-intent","content-refresh"],"evidence":["fact-check","affiliate-value","evidence-based-reviews"],"brief":["content-brief-authoring"],"writing":["content-and-copy"],"editorial":["internal-linking-audit","humanizer","general-writing","anti-ai-slop"],"quality":["seo-onpage","seo-technical","editorial-qa"]},
+    "trust":{"intent":["search-intent"],"evidence":["fact-check","affiliate-value"],"brief":["content-brief-authoring"],"writing":["content-and-copy"],"editorial":["humanizer","general-writing","anti-ai-slop","internal-linking-audit"],"quality":["seo-onpage","seo-technical","editorial-qa"]}
+  }
+}
