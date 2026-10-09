@@ -54,7 +54,10 @@ const server = createServer(async (request, response) => {
     const gitPrepareMatch = url.pathname.match(/^\/api\/runs\/([^/]+)\/git\/prepare$/);
     if (gitPrepareMatch && request.method === 'POST') return json(response, 200, await prepareGitPublication(gitPrepareMatch[1], (await body(request)).mode));
     const gitExecuteMatch = url.pathname.match(/^\/api\/runs\/([^/]+)\/git\/execute$/);
-    if (gitExecuteMatch && request.method === 'POST') return json(response, 200, await executeGitPublication(gitExecuteMatch[1], (await body(request)).confirmation));
+    if (gitExecuteMatch && request.method === 'POST') {
+      const input = await body(request);
+      return json(response, 200, await executeGitPublication(gitExecuteMatch[1], input.confirmation, input.files));
+    }
     const runMatch = url.pathname.match(/^\/api\/runs\/([^/]+)$/);
     if (runMatch && request.method === 'GET') return json(response, 200, await getRun(runMatch[1]));
     const recoverMatch = url.pathname.match(/^\/api\/runs\/([^/]+)\/steps\/([^/]+)\/recover$/);

@@ -3,6 +3,7 @@ let selectedStepId;
 let syncTimer;
 let openAiConfigured = false;
 let activeBatch;
+let pendingPublication;
 let batchTimer;
 let sites = {};
 const builtInSite = { id: 'bloc-notes-numerique', name: 'Bloc-notes numériques', localPath: '/Users/marc/bloc-notes-numerique', language: 'fr-FR' };
@@ -164,13 +165,27 @@ async function execute(id, provider) {
   }
 }
 
+function renderGitSelection(publication) {
+  pendingPublication = publication;
+  const suggested = new Set(publication.suggestedFiles || []);
+  detail.querySelector('#message').innerHTML = `<section class="git-review"><h3>Revue des fichiers à publier</h3><p>Seuls les fichiers cochés seront commités. Les autres modifications resteront locales.</p><div class="git-files">${publication.files.map(file => `<label><input type="checkbox" value="${escapeHtml(file)}" ${suggested.has(file) ? 'checked' : ''}> ${escapeHtml(file)}${suggested.has(file) ? ' — recommandé' : ''}</label>`).join('')}</div><button id="confirm-git">${publication.mode === 'main' ? 'Confirmer le push sur main' : 'Créer la branche et la pull request'}</button><button id="cancel-git" class="reject">Annuler</button></section>`;
+  detail.querySelector('#cancel-git').addEventListener('click', () => { pendingPublication = undefined; detail.querySelector('#message').innerHTML = ''; });
+  detail.querySelector('#confirm-git').addEventListener('click', executeSelectedPublication);
+}
+
+async function executeSelectedPublication() {
+  const files = [...detail.querySelectorAll('.git-files input:checked')].map(input => input.value);
+  const confirmation = pendingPublication.mode === 'main' ? 'PUSH_MAIN' : 'PUSH_BRANCH';
+  try {
+    const result = await api(`/api/runs/${run.id}/git/execute`, { method: 'POST', body: JSON.stringify({ confirmation, files }) });
+    detail.querySelector('#message').innerHTML = `<p class="notice">Push terminé: ${escapeHtml(result.commit)}<br>${escapeHtml(result.pullRequest?.url || result.pullRequest?.instruction || 'main mis à jour')}</p>`;
+  } catch (error) { detail.querySelector('#message').innerHTML += `<p class="notice error">${escapeHtml(error.message)}</p>`; }
+}
+
 async function prepareGit(mode) {
   try {
     const publication = await api(`/api/runs/${run.id}/git/prepare`, { method: 'POST', body: JSON.stringify({ mode }) });
-    const confirmation = prompt(`Fichiers concernés:\n${publication.files.join('\n')}\n\nTapez ${mode === 'main' ? 'PUSH_MAIN' : 'PUSH_BRANCH'} pour confirmer.`);
-    if (!confirmation) return;
-    const result = await api(`/api/runs/${run.id}/git/execute`, { method: 'POST', body: JSON.stringify({ confirmation }) });
-    detail.querySelector('#message').innerHTML = `<p class="notice">Push terminé: ${escapeHtml(result.commit)}<br>${escapeHtml(result.pullRequest?.url || result.pullRequest?.instruction || 'main mis à jour')}</p>`;
+    renderGitSelection(publication);
   } catch (error) { detail.querySelector('#message').innerHTML = `<p class="notice error">${escapeHtml(error.message)}</p>`; }
 }
 
