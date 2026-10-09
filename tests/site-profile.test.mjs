@@ -15,3 +15,11 @@ test('les instructions étrangères restent détectables sans modifier les skill
   assert.ok(conflicts.some(conflict => conflict.marker === 'italiaanse-percolator.nl'));
   assert.ok(conflicts.every(conflict => conflict.skill && conflict.file));
 });
+
+test('détecte automatiquement les contextes étrangers pour un nouveau site', async () => {
+  const conflicts = await inspectContextConflicts(['guide-content-workflow', 'fact-check'], {
+    name: 'Biologische Hondensnacks', topic: 'Natuurlijke snacks voor honden', foreignContexts: []
+  });
+  assert.ok(conflicts.some(conflict => conflict.marker === 'bloc-notes-numeriques.fr'));
+  assert.ok(conflicts.some(conflict => conflict.marker === 'italiaanse-percolator.nl'));
+});

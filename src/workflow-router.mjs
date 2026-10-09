@@ -11,8 +11,21 @@ export function detectSection(target) {
   return route;
 }
 
+export function selectRoute(input) {
+  if (input.contentType && input.contentType !== 'auto') {
+    const explicit = config.routes.find(route => route.section === input.contentType);
+    if (!explicit) throw new Error(`Type éditorial inconnu: ${input.contentType}`);
+    return explicit;
+  }
+  try { return detectSection(input.target); }
+  catch (error) {
+    if (input.operation === 'create') return config.routes.find(route => route.section === 'guide');
+    throw new Error(`${error.message}. Sélectionnez explicitement le type éditorial pour cette architecture de site.`);
+  }
+}
+
 export function buildWorkflow(input) {
-  const route = detectSection(input.target);
+  const route = selectRoute(input);
   const skills = config.sectionSkills[route.section];
   const existing = input.operation !== 'create';
   const steps = [];

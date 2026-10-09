@@ -40,6 +40,7 @@
         <label>Chemin local du site<input name="sitePath" value="/Users/marc/bloc-notes-numerique" required></label>
         <label>URL ou slug à traiter<input name="target" placeholder="/guides/exemple/" required></label>
         <label>Opération<select name="operation"><option value="audit-update">Auditer puis actualiser</option><option value="create">Créer un nouveau contenu</option></select></label>
+        <label>Workflow éditorial<select name="contentType"><option value="auto">Détecter depuis l’URL</option><option value="guide">Guide / article informationnel</option><option value="comparison">Comparatif / sélection</option><option value="brand">Marque / produit</option><option value="usage">Usage / besoin</option><option value="deal">Bons plans</option><option value="trust">Confiance / institutionnel</option></select></label>
         <label>Consigne éditoriale<textarea name="request" rows="3" placeholder="Objectif, données disponibles, contraintes…"></textarea></label>
         <button type="submit">Créer l’exécution</button>
       </form>

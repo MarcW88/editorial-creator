@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { detectSection, buildWorkflow } from '../src/workflow-router.mjs';
+import { detectSection, selectRoute, buildWorkflow } from '../src/workflow-router.mjs';
 
 test('route chaque section vers ses workflows originaux', () => {
   assert.equal(detectSection('/guides/test/').analysis, 'guide-analysis-workflow');
@@ -23,6 +23,18 @@ test('une création ne fabrique pas un audit préalable', () => {
   assert.ok(workflow.steps.some(step => step.skills.includes('usage-content-workflow')));
 });
 
-test('une section inconnue est refusée', () => {
+test('une section inconnue est refusée par la détection seule', () => {
   assert.throws(() => detectSection('/inconnue/test/'), /Aucun workflow/);
+});
+
+test('un site arbitraire peut sélectionner explicitement un workflow existant', () => {
+  const route = selectRoute({ target: 'https://biologische-hondensnacks.nl/eiwit/kip/', operation: 'create', contentType: 'guide' });
+  assert.equal(route.content, 'guide-content-workflow');
+  const workflow = buildWorkflow({ target: 'https://biologische-hondensnacks.nl/eiwit/kip/', operation: 'create', contentType: 'guide' });
+  assert.ok(workflow.steps.some(step => step.skills.includes('guide-content-workflow')));
+});
+
+test('une création inconnue utilise Guide par défaut mais un audit exige un choix', () => {
+  assert.equal(selectRoute({ target: '/eiwit/kip/', operation: 'create', contentType: 'auto' }).section, 'guide');
+  assert.throws(() => selectRoute({ target: '/eiwit/kip/', operation: 'audit-update', contentType: 'auto' }), /Sélectionnez explicitement/);
 });

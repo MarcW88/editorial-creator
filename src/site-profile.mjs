@@ -16,10 +16,13 @@ export async function getSiteProfile(id) {
 
 export async function inspectContextConflicts(skillNames, profile) {
   const bundles = await buildSkillBundle(skillNames);
+  const knownContexts = ['italiaanse-percolator.nl', 'bloc-notes-numeriques.fr', 'cafetières italiennes', 'koffie', 'Nederlandse content'];
+  const ownContext = [profile.domain, profile.name, profile.topic].filter(Boolean).map(value => value.toLocaleLowerCase());
+  const markers = [...new Set([...(profile.foreignContexts || []), ...knownContexts])].filter(marker => !ownContext.some(value => value.includes(marker.toLocaleLowerCase())));
   const conflicts = [];
   for (const bundle of bundles) {
     for (const [file, content] of Object.entries(bundle.files)) {
-      for (const marker of profile.foreignContexts) {
+      for (const marker of markers) {
         if (content.toLocaleLowerCase().includes(marker.toLocaleLowerCase())) conflicts.push({ skill: bundle.name, file, marker });
       }
     }
