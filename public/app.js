@@ -85,7 +85,7 @@ document.querySelector('#site-form').addEventListener('submit', async event => {
   const values = Object.fromEntries(new FormData(event.currentTarget));
   const message = document.querySelector('#site-message');
   try {
-    const candidate = await api('/api/sites/inspect', { method: 'POST', body: JSON.stringify({ localPath: values.localPath }) });
+    const candidate = await api('/api/sites/inspect', { method: 'POST', body: JSON.stringify({ source: values.source }) });
     const profile = await api('/api/sites/confirm', { method: 'POST', body: JSON.stringify({ ...candidate, language: values.language, topic: values.topic }) });
     message.innerHTML = `<p class="notice">Profil ${escapeHtml(profile.name)} validé. Stack détectée: ${escapeHtml(profile.stack)}.</p>`;
     await refreshSites();

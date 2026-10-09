@@ -5,7 +5,7 @@ import { createRun, getRun, approveStep } from './run-store.mjs';
 import { executeStep, doctor } from './codex-executor.mjs';
 import { syncSkills } from './skill-registry.mjs';
 import { listRoutes } from './workflow-router.mjs';
-import { inspectSite, confirmSite, listOnboardedSites } from './onboarding.mjs';
+import { inspectSiteSource, confirmSite, listOnboardedSites } from './onboarding.mjs';
 import { prepareGitPublication, executeGitPublication } from './git-publisher.mjs';
 
 const root = resolve(import.meta.dirname, '..');
@@ -33,7 +33,7 @@ const server = createServer(async (request, response) => {
     if (url.pathname === '/api/health') return json(response, 200, await doctor());
     if (url.pathname === '/api/workflows') return json(response, 200, listRoutes());
     if (url.pathname === '/api/sites' && request.method === 'GET') return json(response, 200, await listOnboardedSites());
-    if (url.pathname === '/api/sites/inspect' && request.method === 'POST') return json(response, 200, await inspectSite((await body(request)).localPath));
+    if (url.pathname === '/api/sites/inspect' && request.method === 'POST') return json(response, 200, await inspectSiteSource((await body(request)).source));
     if (url.pathname === '/api/sites/confirm' && request.method === 'POST') return json(response, 201, await confirmSite(await body(request)));
     if (url.pathname === '/api/skills/sync' && request.method === 'POST') return json(response, 200, await syncSkills());
     if (url.pathname === '/api/runs' && request.method === 'POST') return json(response, 201, await createRun(await body(request)));

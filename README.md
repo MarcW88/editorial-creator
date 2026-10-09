@@ -45,6 +45,6 @@ Modifier explicitement le commit dans `config/skills-lock.json`, puis exécuter 
 
 Les exécutions restent locales et séquentielles. Le routeur sélectionne les workflows originaux pour `/guides/`, `/comparatifs/`, `/marques/`, `/usages/`, `/bons-plans/` et les pages de confiance.
 
-Un nouveau dépôt peut être inspecté depuis l’interface. Son profil n’est enregistré qu’après confirmation explicite de sa langue et de sa thématique. Les profils ajoutés localement restent dans `.editorial-data/` et ne sont pas versionnés.
+Un nouveau dépôt peut être inspecté depuis l’interface à partir d’un chemin local ou d’une URL `https://github.com/proprietaire/depot`. Les dépôts GitHub sont clonés avec GitHub CLI dans `.editorial-data/repositories/`. Le profil n’est enregistré qu’après confirmation explicite de sa langue et de sa thématique. Les clones et profils ajoutés localement restent dans `.editorial-data/` et ne sont pas versionnés.
 
 Après la validation humaine finale, l’application peut préparer une liste exacte de fichiers, puis créer et pousser une branche après la confirmation `PUSH_BRANCH`. Le push direct sur `main` exige la confirmation distincte `PUSH_MAIN`. GitHub CLI n’étant pas installé automatiquement, la création de pull request est fournie comme commande explicite tant que `gh` n’est pas disponible. Le retrait de `noindex` reste une instruction séparée.
