@@ -38,19 +38,21 @@
       <form id="run-form">
         <label>Profil éditorial<select id="site-profile" name="siteProfile"><option value="bloc-notes-numerique">Bloc-notes numériques · FR</option></select></label>
         <label>Chemin local du site<input name="sitePath" value="/Users/marc/bloc-notes-numerique" required></label>
-        <label>URL ou slug à traiter<input name="target" placeholder="/guides/exemple/" required></label>
+        <label class="full">URL(s) ou slug(s), une valeur par ligne<textarea name="target" rows="3" placeholder="/guides/exemple/" required></textarea></label>
         <label>Opération<select name="operation"><option value="audit-update">Auditer puis actualiser</option><option value="create">Créer un nouveau contenu</option></select></label>
+        <label>Mode d’exécution<select name="executionMode"><option value="manual">Étape par étape avec validations</option><option value="automatic">Tout exécuter automatiquement</option></select></label>
         <label>Workflow éditorial<select name="contentType"><option value="auto">Détecter depuis l’URL</option><option value="guide">Guide / article informationnel</option><option value="comparison">Comparatif / sélection</option><option value="brand">Marque / produit</option><option value="usage">Usage / besoin</option><option value="deal">Bons plans</option><option value="trust">Confiance / institutionnel</option></select></label>
         <label>Consigne éditoriale<textarea name="request" rows="3" placeholder="Objectif, données disponibles, contraintes…"></textarea></label>
         <button type="submit">Créer l’exécution</button>
       </form>
     </section>
 
+    <div id="batch-status" hidden></div>
     <section id="workspace" class="workspace" hidden>
       <nav aria-label="Étapes du workflow"><button id="new-run" class="secondary new-run">Nouvelle exécution</button><ol id="steps" class="steps"></ol></nav>
       <article id="step-detail" class="step-detail"></article>
     </section>
   </main>
-  <script type="module" src="/app.js?v=8"></script>
+  <script type="module" src="/app.js?v=9"></script>
 </body>
 </html>

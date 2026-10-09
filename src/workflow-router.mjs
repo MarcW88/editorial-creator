@@ -39,7 +39,7 @@ export function buildWorkflow(input) {
     { id: 'fact-check-final', label: 'Fact-check après révisions', skills: ['fact-check'], artifact: 'claims-review.json', humanApproval: true },
     { id: 'quality', label: 'SEO et QA', skills: skills.quality, artifact: 'quality-report.json', humanApproval: true }
   );
-  if (route.analysis) steps.push({ id: 'publish-review', label: 'Publish Review', skills: [route.analysis], mode: 'PUBLISH_REVIEW', artifact: 'publish-review.json', requiredVerdict: 'PASS — READY_FOR_HUMAN_VALIDATION', humanApproval: true });
+  if (route.analysis) steps.push({ id: 'publish-review', label: 'Publish Review', skills: [route.analysis], mode: 'PUBLISH_REVIEW', artifact: 'publish-review.json', allowedVerdicts: ['PASS — READY_FOR_HUMAN_VALIDATION', 'FAIL — KEEP_NOINDEX'], humanApproval: true });
   else steps.push({ id: 'final-review', label: 'Revue finale', skills: [route.content, ...skills.quality], artifact: 'final-review.json', humanApproval: true });
   return { id: `${route.section}-${input.operation}`, version: 1, section: route.section, route, steps };
 }

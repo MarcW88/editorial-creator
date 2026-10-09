@@ -37,6 +37,18 @@ test('un artefact conforme peut être récupéré indépendamment de son verdict
   assert.equal(recovered.steps[0].attempts[0].outcome, 'FAIL');
 });
 
+test('un Publish Review FAIL ne peut pas être approuvé et retourne vers la rédaction', async () => {
+  const run = await createRun({ sitePath: '/tmp/site', target: '/guides/reprise', operation: 'create' });
+  const publish = run.steps.at(-1);
+  run.steps.forEach(step => step.status = 'APPROVED');
+  publish.status = 'AWAITING_APPROVAL';
+  publish.attempts.push({ publishVerdict: 'FAIL — KEEP_NOINDEX', outcome: 'FAIL' });
+  await assert.rejects(() => approveStep(run, publish.id, 'approve'), /ne peut pas être approuvé/);
+  const corrected = await approveStep(run, publish.id, 'reject', 'Corriger les blockers');
+  assert.equal(corrected.steps.find(step => step.id === 'writing').status, 'REVISION_REQUIRED');
+  assert.equal(corrected.steps.at(-1).status, 'LOCKED');
+});
+
 test('un refus bloque le workflow et exige une révision', async () => {
   const run = await createRun({ sitePath: '/tmp/site', target: '/guides/test' });
   run.steps[0].status = 'AWAITING_APPROVAL';

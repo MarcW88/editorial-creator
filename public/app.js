@@ -2,6 +2,8 @@ let run;
 let selectedStepId;
 let syncTimer;
 let openAiConfigured = false;
+let activeBatch;
+let batchTimer;
 let sites = {};
 const builtInSite = { id: 'bloc-notes-numerique', name: 'Bloc-notes numériques', localPath: '/Users/marc/bloc-notes-numerique', language: 'fr-FR' };
 const escapeHtml = value => String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;');
@@ -58,7 +60,7 @@ function render(selectedId) {
   stepsNode.innerHTML = run.steps.map((step, index) => `<li class="${step.id === selected.id ? 'active' : ''} ${step.status}" data-id="${step.id}"><span>${index + 1}</span><span>${step.label}<br><small>${step.status}</small></span></li>`).join('');
   stepsNode.querySelectorAll('li').forEach(node => node.addEventListener('click', () => render(node.dataset.id)));
   const last = selected.attempts.at(-1);
-  detail.innerHTML = `<p class="section-number">Étape contrôlée</p><h2>${selected.label}</h2><p class="status">${selected.status}</p><p><strong>Livrable attendu :</strong> ${escapeHtml(expectedOutputs[selected.id] || selected.artifact)}</p><p>Skills originaux exigés :</p><ul class="skill-list">${selected.skills.map(skill => `<li>${skill}</li>`).join('')}</ul>${last ? `<p class="notice">Artefact : ${last.outputPath}<br>Commit : ${last.skillCommit}<br>Profil : ${last.siteProfile || '—'}<br>Exécuteur : ${last.provider === 'openai-api' ? 'API OpenAI' : 'Abonnement ChatGPT'}<br>Conflits contextuels : ${last.contextConflicts?.length || 0}<br>Statut technique : ${last.status}${last.outcome ? `<br>Résultat éditorial : ${last.outcome}` : ''}${last.startedAt ? `<br>Temps écoulé : <span id="elapsed">${elapsed(last.startedAt)}</span>` : ''}${last.error ? `<br>${escapeHtml(last.error)}` : ''}</p>` : ''}${selected.status === 'RUNNING' ? `<p class="notice">Exécution en cours. Dernière activité : ${escapeHtml(last?.lastActivityAt ? new Date(last.lastActivityAt).toLocaleTimeString() : 'initialisation')}. Cette page se rafraîchit automatiquement.</p>` : ''}${last?.events?.length ? `<details open><summary>Activité récente</summary><ol class="activity">${last.events.slice(-12).map(event => `<li><time>${escapeHtml(new Date(event.at).toLocaleTimeString())}</time> ${escapeHtml(event.label)}</li>`).join('')}</ol></details>` : ''}<div id="artifact"></div><div id="message"></div><div class="actions">${last?.artifactBytes ? '<button id="view-artifact" class="secondary">Consulter le livrable</button>' : ''}${selected.status === 'FAILED' && last?.artifactBytes ? '<button id="recover-artifact">Récupérer ce livrable terminé</button>' : ''}${['READY','REVISION_REQUIRED','FAILED','TIMEOUT'].includes(selected.status) ? `<button id="execute">${['FAILED','TIMEOUT'].includes(selected.status) ? 'Relancer avec Codex' : 'Exécuter avec Codex'}</button>` : ''}${selected.status === 'LIMIT_REACHED' && openAiConfigured ? '<button id="resume-openai">Reprendre avec l’API OpenAI</button>' : ''}${selected.status === 'LIMIT_REACHED' && !openAiConfigured ? '<p class="notice error">Limite Codex détectée. Redémarrez le serveur avec OPENAI_API_KEY pour autoriser une reprise API explicite.</p>' : ''}${selected.status === 'AWAITING_APPROVAL' ? `<button id="approve">${last?.outcome === 'PASS' ? 'Valider et continuer' : 'Accepter le diagnostic et continuer'}</button><button id="reject" class="reject">Demander une correction</button>` : ''}${run.status === 'HUMAN_APPROVED' ? '<button id="prepare-branch">Préparer branche + pull request</button><button id="prepare-main" class="reject">Préparer push direct main</button>' : ''}</div>`;
+  detail.innerHTML = `<p class="section-number">Étape contrôlée</p><h2>${selected.label}</h2><p class="status">${selected.status}</p><p><strong>Livrable attendu :</strong> ${escapeHtml(expectedOutputs[selected.id] || selected.artifact)}</p><p>Skills originaux exigés :</p><ul class="skill-list">${selected.skills.map(skill => `<li>${skill}</li>`).join('')}</ul>${last ? `<p class="notice">Artefact : ${last.outputPath}<br>Commit : ${last.skillCommit}<br>Profil : ${last.siteProfile || '—'}<br>Exécuteur : ${last.provider === 'openai-api' ? 'API OpenAI' : 'Abonnement ChatGPT'}<br>Conflits contextuels : ${last.contextConflicts?.length || 0}<br>Statut technique : ${last.status}${last.outcome ? `<br>Résultat éditorial : ${last.outcome}` : ''}${last.startedAt ? `<br>Temps écoulé : <span id="elapsed">${elapsed(last.startedAt)}</span>` : ''}${last.error ? `<br>${escapeHtml(last.error)}` : ''}</p>` : ''}${selected.status === 'RUNNING' ? `<p class="notice">Exécution en cours. Dernière activité : ${escapeHtml(last?.lastActivityAt ? new Date(last.lastActivityAt).toLocaleTimeString() : 'initialisation')}. Cette page se rafraîchit automatiquement.</p>` : ''}${last?.events?.length ? `<details open><summary>Activité récente</summary><ol class="activity">${last.events.slice(-12).map(event => `<li><time>${escapeHtml(new Date(event.at).toLocaleTimeString())}</time> ${escapeHtml(event.label)}</li>`).join('')}</ol></details>` : ''}<div id="artifact"></div><div id="message"></div><div class="actions">${last?.artifactBytes ? '<button id="view-artifact" class="secondary">Consulter le livrable</button>' : ''}${selected.status === 'FAILED' && last?.artifactBytes ? '<button id="recover-artifact">Récupérer ce livrable terminé</button>' : ''}${['READY','REVISION_REQUIRED','FAILED','TIMEOUT'].includes(selected.status) ? `<button id="execute">${['FAILED','TIMEOUT'].includes(selected.status) ? 'Relancer avec Codex' : 'Exécuter avec Codex'}</button>` : ''}${selected.status === 'LIMIT_REACHED' && openAiConfigured ? '<button id="resume-openai">Reprendre avec l’API OpenAI</button>' : ''}${selected.status === 'LIMIT_REACHED' && !openAiConfigured ? '<p class="notice error">Limite Codex détectée. Redémarrez le serveur avec OPENAI_API_KEY pour autoriser une reprise API explicite.</p>' : ''}${selected.status === 'AWAITING_APPROVAL' && last?.publishVerdict !== 'FAIL — KEEP_NOINDEX' ? `<button id="approve">${last?.outcome === 'PASS' ? 'Valider et continuer' : 'Accepter le diagnostic et continuer'}</button><button id="reject" class="reject">Demander une correction</button>` : ''}${selected.status === 'AWAITING_APPROVAL' && last?.publishVerdict === 'FAIL — KEEP_NOINDEX' ? '<button id="reject" class="reject">Corriger les blockers et rejouer les contrôles</button>' : ''}${['HUMAN_APPROVED','AUTOMATION_COMPLETED'].includes(run.status) ? '<button id="prepare-branch">Préparer branche + pull request</button><button id="prepare-main" class="reject">Préparer push direct main</button>' : ''}</div>`;
   detail.querySelector('#view-artifact')?.addEventListener('click', () => viewArtifact(selected.id));
   detail.querySelector('#execute')?.addEventListener('click', () => execute(selected.id, 'chatgpt'));
   detail.querySelector('#resume-openai')?.addEventListener('click', () => execute(selected.id, 'openai-api'));
@@ -84,6 +86,37 @@ async function viewArtifact(id) {
   } catch (error) { detail.querySelector('#message').innerHTML = `<p class="notice error">${error.message}</p>`; }
 }
 
+function renderBatch() {
+  const node = document.querySelector('#batch-status');
+  if (!activeBatch) { node.hidden = true; return; }
+  node.hidden = false;
+  node.className = 'notice';
+  node.innerHTML = `<strong>Lot séquentiel · ${escapeHtml(activeBatch.status)}</strong><div class="batch-runs">${activeBatch.runs.map((item, index) => `<button class="batch-run" data-run-id="${escapeHtml(item.id)}">${index + 1}. ${escapeHtml(item.target)} — ${escapeHtml(item.status)}</button>`).join('')}</div>`;
+  node.querySelectorAll('.batch-run').forEach(button => button.addEventListener('click', async () => {
+    run = await api(`/api/runs/${button.dataset.runId}`);
+    localStorage.setItem('editorial-active-run', run.id);
+    selectedStepId = undefined;
+    render();
+  }));
+}
+
+function startBatchSync() {
+  clearInterval(batchTimer);
+  batchTimer = setInterval(async () => {
+    try {
+      activeBatch = await api(`/api/batches/${activeBatch.id}`);
+      renderBatch();
+      const current = activeBatch.runs.find(item => ['RUNNING','READY'].includes(item.status)) || activeBatch.runs.at(-1);
+      if (current) {
+        run = await api(`/api/runs/${current.id}`);
+        localStorage.setItem('editorial-active-run', run.id);
+        render();
+      }
+      if (['COMPLETED','BLOCKED'].includes(activeBatch.status)) clearInterval(batchTimer);
+    } catch {}
+  }, 2500);
+}
+
 function startRunSync() {
   clearInterval(syncTimer);
   syncTimer = setInterval(async () => {
@@ -97,6 +130,14 @@ function startRunSync() {
 }
 
 async function restoreRun() {
+  const savedBatchId = localStorage.getItem('editorial-active-batch');
+  if (savedBatchId) {
+    try {
+      activeBatch = await api(`/api/batches/${savedBatchId}`);
+      renderBatch();
+      if (!['COMPLETED','BLOCKED'].includes(activeBatch.status)) startBatchSync();
+    } catch { localStorage.removeItem('editorial-active-batch'); }
+  }
   const runs = await api('/api/runs');
   const savedId = localStorage.getItem('editorial-active-run');
   run = runs.find(candidate => candidate.id === savedId) || runs.find(candidate => candidate.steps.some(step => step.status === 'RUNNING')) || runs.find(candidate => candidate.input?.siteProfile && !candidate.input.target?.includes('test'));
@@ -141,7 +182,11 @@ async function decide(id, decision) {
 
 document.querySelector('#new-run').addEventListener('click', () => {
   clearInterval(syncTimer);
+  clearInterval(batchTimer);
   localStorage.removeItem('editorial-active-run');
+  localStorage.removeItem('editorial-active-batch');
+  activeBatch = undefined;
+  renderBatch();
   run = undefined;
   selectedStepId = undefined;
   workspace.hidden = true;
@@ -170,8 +215,22 @@ document.querySelector('#site-form').addEventListener('submit', async event => {
 document.querySelector('#run-form').addEventListener('submit', async event => {
   event.preventDefault();
   const input = Object.fromEntries(new FormData(event.currentTarget));
-  try { run = await api('/api/runs', { method: 'POST', body: JSON.stringify(input) }); localStorage.setItem('editorial-active-run', run.id); document.querySelector('#setup').hidden = true; render(); }
-  catch (error) { alert(error.message); }
+  const urls = input.target.split(/\n+/).map(value => value.trim()).filter(Boolean);
+  try {
+    if (input.executionMode === 'automatic') {
+      activeBatch = await api('/api/batches', { method: 'POST', body: JSON.stringify({ ...input, target: undefined, urls }) });
+      localStorage.setItem('editorial-active-batch', activeBatch.id);
+      run = await api(`/api/runs/${activeBatch.runs[0].id}`);
+      renderBatch();
+      startBatchSync();
+    } else {
+      if (urls.length !== 1) throw new Error('Le mode manuel accepte une URL à la fois. Utilisez le mode automatique pour un lot.');
+      run = await api('/api/runs', { method: 'POST', body: JSON.stringify({ ...input, target: urls[0] }) });
+    }
+    localStorage.setItem('editorial-active-run', run.id);
+    document.querySelector('#setup').hidden = true;
+    render();
+  } catch (error) { alert(error.message); }
 });
 
 await refreshSites();

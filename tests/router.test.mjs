@@ -15,6 +15,7 @@ test('une page existante commence par un audit et finit par le publish review', 
   const workflow = buildWorkflow({ target: '/comparatifs/test/', operation: 'audit-update' });
   assert.equal(workflow.steps[0].mode, 'AUDIT');
   assert.equal(workflow.steps.at(-1).mode, 'PUBLISH_REVIEW');
+  assert.deepEqual(workflow.steps.at(-1).allowedVerdicts, ['PASS — READY_FOR_HUMAN_VALIDATION', 'FAIL — KEEP_NOINDEX']);
 });
 
 test('une création ne fabrique pas un audit préalable', () => {

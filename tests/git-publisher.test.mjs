@@ -5,7 +5,7 @@ import { prepareGitPublication } from '../src/git-publisher.mjs';
 
 test('interdit toute préparation Git avant la validation humaine finale', async () => {
   const run = await createRun({ siteProfile: 'bloc-notes-numerique', sitePath: '/Users/marc/bloc-notes-numerique', target: '/guides/test/', operation: 'create' });
-  await assert.rejects(() => prepareGitPublication(run.id, 'branch'), /revue humaine finale/);
+  await assert.rejects(() => prepareGitPublication(run.id, 'branch'), /workflow doit être terminé/);
 });
 
 test('refuse un mode de publication Git inconnu', async () => {

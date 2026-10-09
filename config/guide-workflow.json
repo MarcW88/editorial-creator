@@ -10,6 +10,6 @@
     {"id":"editorial","label":"Révisions éditoriales","skills":["internal-linking-audit","humanizer","general-writing","anti-ai-slop"],"artifact":"editorial-review.json","humanApproval":true},
     {"id":"fact-check-final","label":"Fact-check après révisions","skills":["fact-check"],"artifact":"claims-review.json","humanApproval":true},
     {"id":"quality","label":"SEO et QA","skills":["seo-onpage","seo-technical","seo-best-practices","editorial-qa"],"artifact":"quality-report.json","humanApproval":true},
-    {"id":"publish-review","label":"Publish Review","skills":["guide-analysis-workflow"],"mode":"PUBLISH_REVIEW","artifact":"publish-review.json","requiredVerdict":"PASS — READY_FOR_HUMAN_VALIDATION","humanApproval":true}
+    {"id":"publish-review","label":"Publish Review","skills":["guide-analysis-workflow"],"mode":"PUBLISH_REVIEW","artifact":"publish-review.json","allowedVerdicts":["PASS — READY_FOR_HUMAN_VALIDATION","FAIL — KEEP_NOINDEX"],"humanApproval":true}
   ]
 }

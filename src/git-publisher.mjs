@@ -15,7 +15,7 @@ const changedFiles = async cwd => (await runCommand('git', ['status', '--porcela
 
 export async function prepareGitPublication(runId, mode) {
   const run = await getRun(runId);
-  if (run.status !== 'HUMAN_APPROVED') throw new Error('La revue humaine finale est obligatoire avant toute préparation Git.');
+  if (!['HUMAN_APPROVED', 'AUTOMATION_COMPLETED'].includes(run.status)) throw new Error('Le workflow doit être terminé avant toute préparation Git.');
   if (!['branch', 'main'].includes(mode)) throw new Error('Mode Git invalide.');
   const profile = await getSiteProfile(run.input.siteProfile);
   const files = await changedFiles(profile.localPath);

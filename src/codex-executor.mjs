@@ -40,7 +40,7 @@ export async function doctor() {
 
 function promptFor(run, step, bundles, outputPath, profile, conflicts, provider) {
   const skillIndex = bundles.map(bundle => `- ${bundle.name}: ${bundle.path} (${Object.keys(bundle.files).length} fichiers chargés)`).join('\n');
-  return `Tu exécutes UNE étape d'un workflow éditorial contrôlé.\n\nRÈGLES NON NÉGOCIABLES\n- Lis et applique intégralement chaque SKILL.md indiqué, ainsi que toutes ses références, scripts et templates pertinents.\n- Préserve la méthodologie universelle de chaque skill à l'identique.\n- Les mentions d'un autre site, domaine, produit ou langue sont des règles contextuelles étrangères: ne les applique pas à la cible. Consigne-les dans contextConflicts.\n- N'affirme jamais qu'un skill est exécuté sans livrable vérifiable.\n- Évalue chaque skill conditionnel et marque-le NOT_APPLICABLE avec justification s'il ne s'applique pas; ne l'ignore jamais silencieusement.\n- Ne passe pas à une autre étape.\n- Ne publie pas, ne pousse pas et ne retire jamais noindex.\n- ${provider === 'openai-api' ? "L’utilisation de l’API OpenAI a été autorisée explicitement pour cette tentative." : "N’utilise aucune API payante."}\n- Retourne le résultat final conforme au schéma JSON imposé; Codex l’enregistrera dans ${outputPath}.\n- Le champ outcome évalue l’exécution de cette étape, pas la décision éditoriale sur la page: PASS si le travail demandé est complet même si l’audit recommande une révision.\n- Le champ content contient le livrable éditorial complet et, pour un Publish Review, le verdict exact.\n- Le résultat doit inclure skillExecution et contextConflicts. Pour chaque skill: fichiers consultés, actions, outils, statut PASS/FAIL/NOT_APPLICABLE et justification.\n\nPROFIL DU SITE — couche contextuelle séparée\n${JSON.stringify(profile, null, 2)}\n\nCONFLITS CONTEXTUELS DÉTECTÉS AVANT EXÉCUTION\n${JSON.stringify(conflicts, null, 2)}\n\nÉTAPE\n${JSON.stringify({ id: step.id, label: step.label, mode: step.mode, artifact: step.artifact, conditionalSkills: step.conditionalSkills || [] }, null, 2)}\n\nCONTEXTE DE PAGE\n${JSON.stringify(run.input, null, 2)}\n\nSKILLS ORIGINAUX VERROUILLÉS\n${skillIndex}\n\nSi une donnée ou un accès manque, échoue explicitement au lieu d'inventer.`;
+  return `Tu exécutes UNE étape d'un workflow éditorial contrôlé.\n\nRÈGLES NON NÉGOCIABLES\n- Lis et applique intégralement chaque SKILL.md indiqué, ainsi que toutes ses références, scripts et templates pertinents.\n- Préserve la méthodologie universelle de chaque skill à l'identique.\n- Les mentions d'un autre site, domaine, produit ou langue sont des règles contextuelles étrangères: ne les applique pas à la cible. Consigne-les dans contextConflicts.\n- N'affirme jamais qu'un skill est exécuté sans livrable vérifiable.\n- Évalue chaque skill conditionnel et marque-le NOT_APPLICABLE avec justification s'il ne s'applique pas; ne l'ignore jamais silencieusement.\n- Ne passe pas à une autre étape.\n- Ne publie pas, ne pousse pas et ne retire jamais noindex.\n- ${provider === 'openai-api' ? "L’utilisation de l’API OpenAI a été autorisée explicitement pour cette tentative." : "N’utilise aucune API payante."}\n- Retourne le résultat final conforme au schéma JSON imposé; Codex l’enregistrera dans ${outputPath}.\n- Le champ outcome évalue l’exécution de cette étape, pas la décision éditoriale sur la page: PASS si le travail demandé est complet même si l’audit recommande une révision.\n- Le champ content contient le livrable éditorial complet et, pour un Publish Review, le verdict exact.\n- Le résultat doit inclure skillExecution et contextConflicts. Pour chaque skill: fichiers consultés, actions, outils, statut PASS/FAIL/NOT_APPLICABLE et justification.\n\nPROFIL DU SITE — couche contextuelle séparée\n${JSON.stringify(profile, null, 2)}\n\nCONFLITS CONTEXTUELS DÉTECTÉS AVANT EXÉCUTION\n${JSON.stringify(conflicts, null, 2)}\n\nÉTAPE\n${JSON.stringify({ id: step.id, label: step.label, mode: step.mode, artifact: step.artifact, conditionalSkills: step.conditionalSkills || [], previousAttempts: step.attempts.map(attempt => ({ outcome: attempt.outcome, publishVerdict: attempt.publishVerdict, error: attempt.error, artifact: attempt.outputPath })) }, null, 2)}\n\nCONTEXTE DE PAGE\n${JSON.stringify(run.input, null, 2)}\n\nSKILLS ORIGINAUX VERROUILLÉS\n${skillIndex}\n\nSi une donnée ou un accès manque, échoue explicitement au lieu d'inventer.`;
 }
 
 export async function executeStep(run, stepId, provider = 'chatgpt') {
@@ -58,7 +58,10 @@ export async function executeStep(run, stepId, provider = 'chatgpt') {
   const contextConflicts = await inspectContextConflicts(skills, profile);
   const runDir = join(root, 'runs', run.id);
   await mkdir(runDir, { recursive: true });
-  const suffix = provider === 'openai-api' ? '.openai-api' : '';
+  const attemptNumber = step.attempts.length + 1;
+  const providerSuffix = provider === 'openai-api' ? '.openai-api' : '';
+  const retrySuffix = attemptNumber > 1 ? `.attempt-${attemptNumber}` : '';
+  const suffix = `${providerSuffix}${retrySuffix}`;
   const outputPath = join(runDir, step.artifact.replace(/\.json$/, `${suffix}.json`));
   const logPath = join(runDir, `${step.id}${suffix}.jsonl`);
   step.status = 'RUNNING';
@@ -119,12 +122,15 @@ export async function executeStep(run, stepId, provider = 'chatgpt') {
   try {
     const artifact = await readFile(outputPath, 'utf8');
     const parsed = JSON.parse(artifact);
+    attempt.artifactBytes = Buffer.byteLength(artifact);
+    attempt.outcome = parsed.outcome;
     const reported = new Set(parsed.skillExecution?.map(item => item.skill));
     const missingSkills = skills.filter(skill => !reported.has(skill));
     if (missingSkills.length) throw new Error(`Skills absents du journal: ${missingSkills.join(', ')}`);
-    if (step.requiredVerdict && !parsed.content.includes(step.requiredVerdict)) throw new Error(`Verdict requis absent: ${step.requiredVerdict}`);
-    attempt.artifactBytes = Buffer.byteLength(artifact);
-    attempt.outcome = parsed.outcome;
+    if (step.allowedVerdicts) {
+      attempt.publishVerdict = step.allowedVerdicts.find(verdict => parsed.content.includes(verdict));
+      if (!attempt.publishVerdict) throw new Error(`Verdict attendu absent: ${step.allowedVerdicts.join(' ou ')}`);
+    }
     attempt.status = result.code === 0 ? 'COMPLETED' : 'FAILED';
   } catch (error) {
     attempt.status = attempt.limitReached ? 'LIMIT_REACHED' : result.timedOut ? 'TIMEOUT' : 'FAILED';

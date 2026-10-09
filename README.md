@@ -35,6 +35,13 @@ OPENAI_API_KEY=... OPENAI_API_MODEL=gpt-5.4 npm start
 
 Ne jamais enregistrer la clé dans le dépôt ou la saisir dans l’interface. Chaque reprise API demande une confirmation explicite et concerne uniquement l’étape en échec.
 
+## Modes d’exécution
+
+- **Étape par étape** : chaque artefact attend une validation ou une demande de correction humaine.
+- **Tout exécuter automatiquement** : les mêmes étapes et skills s’enchaînent sans pause. Un résultat `FAIL` déclenche une correction ciblée, limitée par `AUTO_CORRECTION_LIMIT` (2 par défaut), puis le run se bloque si le problème persiste.
+- Plusieurs URLs peuvent être saisies sur des lignes séparées en mode automatique. Elles sont traitées séquentiellement et conservent chacune leur propre run, leurs artefacts et leur statut.
+- Git, publication et indexation restent toujours séparés de l’automatisation et exigent une confirmation explicite.
+
 ## Fonctionnement
 
 1. Le registre lit `config/skills-lock.json`.

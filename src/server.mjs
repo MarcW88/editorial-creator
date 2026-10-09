@@ -7,6 +7,7 @@ import { syncSkills } from './skill-registry.mjs';
 import { listRoutes } from './workflow-router.mjs';
 import { inspectSiteSource, confirmSite, listOnboardedSites } from './onboarding.mjs';
 import { prepareGitPublication, executeGitPublication } from './git-publisher.mjs';
+import { createBatch, getBatch, executeBatch, executeRunAutomatically } from './automation.mjs';
 
 const root = resolve(import.meta.dirname, '..');
 const publicRoot = join(root, 'public');
@@ -36,6 +37,18 @@ const server = createServer(async (request, response) => {
     if (url.pathname === '/api/sites/inspect' && request.method === 'POST') return json(response, 200, await inspectSiteSource((await body(request)).source));
     if (url.pathname === '/api/sites/confirm' && request.method === 'POST') return json(response, 201, await confirmSite(await body(request)));
     if (url.pathname === '/api/skills/sync' && request.method === 'POST') return json(response, 200, await syncSkills());
+    if (url.pathname === '/api/batches' && request.method === 'POST') {
+      const batch = await createBatch(await body(request));
+      void executeBatch(batch.id).catch(error => console.error('Batch automation failed:', error.message));
+      return json(response, 202, batch);
+    }
+    const batchMatch = url.pathname.match(/^\/api\/batches\/([^/]+)$/);
+    if (batchMatch && request.method === 'GET') return json(response, 200, await getBatch(batchMatch[1]));
+    const executeAllMatch = url.pathname.match(/^\/api\/runs\/([^/]+)\/execute-all$/);
+    if (executeAllMatch && request.method === 'POST') {
+      void executeRunAutomatically(executeAllMatch[1]).catch(error => console.error('Run automation failed:', error.message));
+      return json(response, 202, { id: executeAllMatch[1], status: 'AUTOMATION_STARTING' });
+    }
     if (url.pathname === '/api/runs' && request.method === 'GET') return json(response, 200, await listRuns());
     if (url.pathname === '/api/runs' && request.method === 'POST') return json(response, 201, await createRun(await body(request)));
     const gitPrepareMatch = url.pathname.match(/^\/api\/runs\/([^/]+)\/git\/prepare$/);

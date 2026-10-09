@@ -9,7 +9,8 @@
 - Les états d’exécution et artefacts restent sous `runs/` et ne sont pas versionnés.
 - Les profils ajoutés par onboarding restent dans `.editorial-data/`.
 - Router les contenus selon `config/workflows.json`; ne jamais remplacer un workflow spécialisé par le pipeline Guide.
-- Toute action Git exige une validation éditoriale finale puis une confirmation Git distincte. `PUSH_MAIN` est obligatoire pour un push direct sur main.
+- Toute action Git exige la fin du workflow puis une confirmation Git distincte. `PUSH_MAIN` est obligatoire pour un push direct sur main.
+- Le mode automatique conserve toutes les étapes, traite les URLs séquentiellement et borne les corrections avec `AUTO_CORRECTION_LIMIT`. Un Publish Review FAIL ne peut jamais autoriser publication ou indexation.
 
 ## Vérification
 
