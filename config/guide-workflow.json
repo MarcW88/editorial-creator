@@ -1,0 +1,15 @@
+{
+  "id": "guide-production",
+  "version": 1,
+  "label": "Production d’un guide",
+  "steps": [
+    {"id":"audit","label":"Analyse et décision","skills":["guide-analysis-workflow","seo-content-audit","seo-keyword","search-intent"],"artifact":"audit.json","humanApproval":true},
+    {"id":"evidence","label":"Recherche et preuves","skills":["fact-check","evidence-based-reviews"],"conditionalSkills":["evidence-based-reviews"],"artifact":"evidence.json","humanApproval":true},
+    {"id":"brief","label":"Brief éditorial","skills":["affiliate-value","content-brief-authoring"],"conditionalSkills":["affiliate-value"],"artifact":"brief.json","humanApproval":true},
+    {"id":"writing","label":"Rédaction","skills":["content-and-copy"],"artifact":"draft.json","humanApproval":true},
+    {"id":"editorial","label":"Révisions éditoriales","skills":["internal-linking-audit","humanizer","general-writing","anti-ai-slop"],"artifact":"editorial-review.json","humanApproval":true},
+    {"id":"fact-check-final","label":"Fact-check après révisions","skills":["fact-check"],"artifact":"claims-review.json","humanApproval":true},
+    {"id":"quality","label":"SEO et QA","skills":["seo-onpage","seo-technical","seo-best-practices","editorial-qa"],"artifact":"quality-report.json","humanApproval":true},
+    {"id":"publish-review","label":"Publish Review","skills":["guide-analysis-workflow"],"mode":"PUBLISH_REVIEW","artifact":"publish-review.json","requiredVerdict":"PASS — READY_FOR_HUMAN_VALIDATION","humanApproval":true}
+  ]
+}

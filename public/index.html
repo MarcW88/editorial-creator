@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Editorial Creator</title>
+  <meta name="description" content="Pilotage local et vérifiable des workflows éditoriaux.">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="masthead">
+    <a class="identity" href="/">Editorial Creator</a>
+    <div id="health" class="health">Diagnostic en cours…</div>
+  </header>
+  <main>
+    <section class="intro">
+      <p class="eyebrow">Atelier éditorial local</p>
+      <h1>Un workflow qui ne saute aucune étape.</h1>
+      <p>Chaque skill est chargé depuis un commit verrouillé, exécuté séparément et contrôlé avant que la suite ne soit accessible.</p>
+    </section>
+
+    <section id="setup" class="setup" aria-labelledby="setup-title">
+      <div>
+        <p class="section-number">Nouveau dossier</p>
+        <h2 id="setup-title">Préparer un guide</h2>
+      </div>
+      <form id="run-form">
+        <label>Profil éditorial<select name="siteProfile"><option value="bloc-notes-numerique">Bloc-notes numériques · FR</option></select></label>
+        <label>Chemin local du site<input name="sitePath" value="/Users/marc/bloc-notes-numerique" required></label>
+        <label>URL ou slug à traiter<input name="target" placeholder="/guides/exemple/" required></label>
+        <label>Opération<select name="operation"><option value="audit-update">Auditer puis actualiser</option><option value="create">Créer un guide</option></select></label>
+        <label>Consigne éditoriale<textarea name="request" rows="3" placeholder="Objectif, données disponibles, contraintes…"></textarea></label>
+        <button type="submit">Créer l’exécution</button>
+      </form>
+    </section>
+
+    <section id="workspace" class="workspace" hidden>
+      <nav aria-label="Étapes du workflow"><ol id="steps" class="steps"></ol></nav>
+      <article id="step-detail" class="step-detail"></article>
+    </section>
+  </main>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

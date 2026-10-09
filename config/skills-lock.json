@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "repository": "https://github.com/MarcW88/bloc-notes-numerique.git",
+  "commit": "5b798c38648fdc32a9bbb0f2f6742b2dca9b7951",
+  "skillsRoot": ".agents/skills",
+  "required": [
+    "guide-analysis-workflow",
+    "guide-content-workflow",
+    "seo-content-audit",
+    "seo-keyword",
+    "search-intent",
+    "content-refresh",
+    "fact-check",
+    "evidence-based-reviews",
+    "affiliate-value",
+    "content-brief-authoring",
+    "content-and-copy",
+    "internal-linking-audit",
+    "humanizer",
+    "general-writing",
+    "anti-ai-slop",
+    "seo-drift",
+    "seo-onpage",
+    "seo-technical",
+    "seo-best-practices",
+    "editorial-qa"
+  ]
+}

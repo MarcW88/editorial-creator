@@ -1,0 +1,22 @@
+{
+  "bloc-notes-numerique": {
+    "id": "bloc-notes-numerique",
+    "name": "Bloc-notes numériques",
+    "repository": "MarcW88/bloc-notes-numerique",
+    "localPath": "/Users/marc/bloc-notes-numerique",
+    "domain": "bloc-notes-numeriques.fr",
+    "language": "fr-FR",
+    "topic": "Tablettes E Ink, bloc-notes numériques et prise de notes",
+    "contentRoots": ["guides", "usages", "comparatifs", "marques"],
+    "preferredSources": ["documentation fabricants", "documentation logicielle officielle", "tests indépendants traçables"],
+    "riskAreas": ["compatibilités", "générations produit", "abonnements", "prix", "fonctions cloud", "procédures dépendantes d’une version"],
+    "forbiddenClaims": ["test physique non documenté", "mesure inventée", "prix non daté", "compatibilité supposée"],
+    "foreignContexts": ["italiaanse-percolator.nl", "cafetières italiennes", "koffie", "Nederlandse content"],
+    "rules": [
+      "Les instructions de méthode universelles des skills restent obligatoires.",
+      "Une règle mentionnant un autre domaine ou une autre langue est contextuelle et ne s’applique pas à ce site.",
+      "Toute incompatibilité entre un skill et ce profil doit être consignée dans contextConflicts, sans modifier le skill source.",
+      "AGENTS.md du dépôt cible prévaut pour les conventions propres au site."
+    ]
+  }
+}
