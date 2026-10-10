@@ -14,6 +14,15 @@ export async function getSiteProfile(id) {
   return profile;
 }
 
+export async function validateSiteTarget(profileId, sitePath, target) {
+  const profile = await getSiteProfile(profileId);
+  if (profile.localPath !== sitePath) throw new Error('Le chemin local ne correspond pas au profil sélectionné.');
+  let hostname;
+  try { hostname = new URL(target).hostname.replace(/^www\./, ''); } catch { return profile; }
+  if (profile.domain && hostname !== profile.domain.replace(/^www\./, '')) throw new Error(`La cible ${hostname} ne correspond pas au profil ${profile.name} (${profile.domain}).`);
+  return profile;
+}
+
 export async function inspectContextConflicts(skillNames, profile) {
   const bundles = await buildSkillBundle(skillNames);
   const knownContexts = ['italiaanse-percolator.nl', 'bloc-notes-numeriques.fr', 'cafetières italiennes', 'koffie', 'Nederlandse content'];

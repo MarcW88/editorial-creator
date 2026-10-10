@@ -77,7 +77,7 @@ export async function listOnboardedSites() {
 }
 
 export async function confirmSite(profile) {
-  if (!profile.id || !profile.localPath || !profile.language || profile.language === 'TO_CONFIRM' || !profile.topic || profile.topic === 'TO_CONFIRM') throw new Error('Identifiant, chemin, langue et thématique confirmés sont obligatoires.');
+  if (!profile.id || !profile.localPath || !profile.language || profile.language === 'TO_CONFIRM' || !profile.domain || !profile.topic || profile.topic === 'TO_CONFIRM') throw new Error('Identifiant, chemin, domaine, langue et thématique confirmés sont obligatoires.');
   const inspected = await inspectSite(profile.localPath);
   if (inspected.id !== profile.id) throw new Error('L’identifiant ne correspond pas au dépôt inspecté.');
   const sites = await listOnboardedSites();

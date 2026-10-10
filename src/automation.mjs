@@ -42,6 +42,7 @@ export async function executeRunAutomatically(runId) {
     if (needsCorrection) {
       const corrections = run.automation.corrections[step.id] || 0;
       if (corrections >= maxCorrections) {
+        completed.status = 'AUTOMATION_BLOCKED';
         run.status = 'AUTOMATION_BLOCKED';
         run.automation.blocker = { step: step.id, status: attempt.outcome, verdict: attempt.publishVerdict, reason: 'Limite de corrections automatiques atteinte.' };
         return saveRun(run);

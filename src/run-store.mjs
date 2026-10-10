@@ -2,12 +2,14 @@ import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { buildWorkflow } from './workflow-router.mjs';
+import { validateSiteTarget } from './site-profile.mjs';
 
 const root = resolve(import.meta.dirname, '..');
 const runsRoot = join(root, 'runs');
 const pathFor = id => join(runsRoot, `${id}.json`);
 
 export async function createRun(input) {
+  await validateSiteTarget(input.siteProfile || 'bloc-notes-numerique', input.sitePath, input.target);
   const workflow = buildWorkflow(input);
   const id = randomUUID();
   const now = new Date().toISOString();
